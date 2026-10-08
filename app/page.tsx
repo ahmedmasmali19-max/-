@@ -7,9 +7,19 @@ export default function Home(){
  const [session,setSession]=useState<Session|null>(null),[ready,setReady]=useState(false),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[section,setSection]=useState<'dashboard'|TableName>('dashboard'),[counts,setCounts]=useState<Record<string,number>>({}),[message,setMessage]=useState('');
  const adminEmail=process.env.NEXT_PUBLIC_ADMIN_EMAIL?.toLowerCase().trim();
  const allowed=!!session?.user.email&&!!adminEmail&&session.user.email.toLowerCase()===adminEmail;
- useEffect(()=>{if(!db){setReady(true);return}db.auth.getSession().then(({data})=>{setSession(data.session);setReady(true)});const {data:s}=db.auth.onAuthStateChange((_e,x)=>setSession(x));return()=>s.subscription.unsubscribe()},[]);
- useEffect(()=>{if(!db||!allowed||section!=='dashboard')return;Promise.all(Object.keys(tables).map(k=>db.from(k).select('*',{count:'exact',head:true}))).then(r=>setCounts(Object.fromEntries(Object.keys(tables).map((k,i)=>[k,r[i].count??0]))))},[allowed,section]);
- async function signIn(e:React.FormEvent){e.preventDefault();setMessage('');if(!db)return;const {error}=await db.auth.signInWithPassword({email,password});if(error)setMessage('تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور.');setPassword('')}
+ useEffect(()=>{
+  const client=db;
+  if(!client){setReady(true);return}
+  client.auth.getSession().then(({data})=>{setSession(data.session);setReady(true)});
+  const {data:s}=client.auth.onAuthStateChange((_e,x)=>setSession(x));
+  return()=>s.subscription.unsubscribe();
+ },[]);
+ useEffect(()=>{
+  const client=db;
+  if(!client||!allowed||section!=='dashboard')return;
+  Promise.all(Object.keys(tables).map(k=>client.from(k).select('*',{count:'exact',head:true}))).then(r=>setCounts(Object.fromEntries(Object.keys(tables).map((k,i)=>[k,r[i].count??0]))));
+ },[allowed,section]);
+ async function signIn(e:React.FormEvent){e.preventDefault();setMessage('');const client=db;if(!client)return;const {error}=await client.auth.signInWithPassword({email,password});if(error)setMessage('تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور.');setPassword('')}
  if(!ready)return <div className="center">جارٍ تجهيز البوابة…</div>;
  if(!configured)return <div className="center"><div className="card"><div className="logo">و</div><h1>بوابة وصول</h1><p>أضف متغيرات Supabase في Vercel لتفعيل النظام.</p></div></div>;
  if(!session||!allowed)return <div className="center"><div className="card"><div className="logo">و</div><span>جمعية الأسر المنتجة بجازان</span><h1>بوابة إدارة وصول</h1>{session&&!allowed?<><p className="err">هذا الحساب غير مخوّل.</p><button onClick={()=>db?.auth.signOut()}>تسجيل الخروج</button></>:<form onSubmit={signIn}><input type="email" required placeholder="البريد الإلكتروني" value={email} onChange={e=>setEmail(e.target.value)}/><input type="password" required placeholder="كلمة المرور" value={password} onChange={e=>setPassword(e.target.value)}/><button>دخول المدير</button></form>}{message&&<p className="err">{message}</p>}</div></div>;
