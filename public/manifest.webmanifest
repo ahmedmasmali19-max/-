@@ -1,0 +1,11 @@
+{
+  "name":"بوابة وصول",
+  "short_name":"وصول",
+  "description":"منصة إدارة مشروع وصول - جمعية الأسر المنتجة بجازان",
+  "start_url":"/",
+  "display":"standalone",
+  "background_color":"#f4f8f7",
+  "theme_color":"#0f7d6d",
+  "lang":"ar",
+  "dir":"rtl"
+}
