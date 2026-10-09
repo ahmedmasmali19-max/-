@@ -106,11 +106,20 @@ export default function Portal(){
   const table=section==='beneficiaries'?'beneficiary_report_details':configs[section]?.table;
   if(!table)return;
   const payload={...form};
+  const documentFile=payload.document_file as File|null|undefined;
+  delete payload.document_file;
   ['id','created_at','changed_at','requested_at'].forEach(k=>delete payload[k]);
   Object.keys(payload).forEach(k=>{if(payload[k]==='')payload[k]=null});
+  if(section==='documents'&&documentFile instanceof File){
+   const safeName=documentFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+   const path=`${new Date().toISOString().slice(0,10)}/${crypto.randomUUID()}-${safeName}`;
+   const {error:uploadError}=await db.storage.from('wusool-documents').upload(path,documentFile,{upsert:false,contentType:documentFile.type||undefined});
+   if(uploadError){setMessage(`تعذر رفع الملف: ${uploadError.message}`);return;}
+   payload.file_url=path;
+  }
   const result=editing?.id?await db.from(table).update(payload).eq('id',editing.id):await db.from(table).insert(payload);
   if(result.error){setMessage(`تعذر الحفظ: ${result.error.message}`);return;}
-  cancel();setMessage('تم حفظ البيانات بنجاح.');await loadAll();
+  cancel();setMessage(section==='documents'&&documentFile?'تم رفع المستند وحفظ بياناته بنجاح.':'تم حفظ البيانات بنجاح.');await loadAll();
  }
 
  async function remove(r:Row){
@@ -135,6 +144,12 @@ export default function Portal(){
   const src=await QRCode.toDataURL(text,{width:320,margin:2});
   setQr({title:`QR المركبة ${r.plate_number}`,src});
  }
+ async function openDocument(r:Row){
+  if(!db||!r.file_url)return;
+  const {data:signed,error}=await db.storage.from('wusool-documents').createSignedUrl(r.file_url,120);
+  if(error||!signed?.signedUrl){setMessage(`تعذر فتح الملف: ${error?.message||'الرابط غير متاح'}`);return;}
+  window.open(signed.signedUrl,'_blank','noopener,noreferrer');
+ }
  function exportCsv(){
   const headers=['رقم المستفيد','اسم المستفيد','المركبة','الدخل','العائد','الصافي'];
   const lines=reports.map(r=>[r.beneficiary_number,r.beneficiary_name,r.vehicle_type,r.quarterly_income,r.total_return,r.net_after_return].map(x=>`"${String(x??'').replaceAll('"','""')}"`).join(','));
@@ -150,7 +165,7 @@ export default function Portal(){
  return <div className="app-shell">
   <aside className="sidebar"><div className="brand"><div className="mark">و</div><div><b>وصول</b><small>منصة إدارة المشروع</small></div></div><nav>{(Object.keys(titles) as Section[]).map(s=><button key={s} className={section===s?'active':''} onClick={()=>{setSection(s);cancel();setSearch('');}}><span className="nav-dot"/>{titles[s]}</button>)}</nav><div className="side-note"><b>تمكين • التزام • انضباط</b><small>نظام تشغيلي متكامل لمشروع وصول</small></div><button className="signout" onClick={()=>db?.auth.signOut()}>تسجيل الخروج</button></aside>
   <main className="main"><header className="topbar"><div><span className="eyebrow">جمعية الأسر المنتجة بجازان</span><h1>{titles[section]}</h1></div><div className="top-actions"><button className="ghost" onClick={()=>window.print()}>طباعة</button><div className="admin-pill"><span className="status-dot"/>مدير النظام</div></div></header>{message&&<div className="toast">{message}</div>}
-  {loading?<div className="panel center-panel"><div className="loader"/><p>جارٍ تحميل البيانات…</p></div>:section==='dashboard'?<Dashboard totals={totals} groups={vehicleGroups as [string,number][]} critical={critical}/>:section==='beneficiaries'?<Beneficiaries rows={filteredRows} reports={reports} fields={fields} showForm={showForm} form={form} setForm={setForm} editing={editing} add={add} edit={edit} remove={remove} save={save} cancel={cancel} search={search} setSearch={setSearch} setProfile={setProfile} exportCsv={exportCsv}/>:section==='audit'?<Audit rows={filteredRows} search={search} setSearch={setSearch}/>:<Generic section={section} rows={filteredRows} config={configs[section]!} showForm={showForm} fields={fields} form={form} setForm={setForm} editing={editing} add={add} edit={edit} remove={remove} save={save} cancel={cancel} search={search} setSearch={setSearch} showQr={showQr} criticalOnly={criticalOnly} setCriticalOnly={setCriticalOnly}/>}</main>
+  {loading?<div className="panel center-panel"><div className="loader"/><p>جارٍ تحميل البيانات…</p></div>:section==='dashboard'?<Dashboard totals={totals} groups={vehicleGroups as [string,number][]} critical={critical}/>:section==='beneficiaries'?<Beneficiaries rows={filteredRows} reports={reports} fields={fields} showForm={showForm} form={form} setForm={setForm} editing={editing} add={add} edit={edit} remove={remove} save={save} cancel={cancel} search={search} setSearch={setSearch} setProfile={setProfile} exportCsv={exportCsv}/>:section==='audit'?<Audit rows={filteredRows} search={search} setSearch={setSearch}/>:<Generic section={section} rows={filteredRows} config={configs[section]!} showForm={showForm} fields={fields} form={form} setForm={setForm} editing={editing} add={add} edit={edit} remove={remove} save={save} cancel={cancel} search={search} setSearch={setSearch} showQr={showQr} openDocument={openDocument} criticalOnly={criticalOnly} setCriticalOnly={setCriticalOnly}/>}</main>
   {profile&&<ProfileModal person={profile} data={data} onClose={()=>setProfile(null)}/>} {qr&&<Modal title={qr.title} onClose={()=>setQr(null)}><img className="qr-image" src={qr.src} alt="QR"/><p className="muted center-text">يعرض بيانات تعريف المركبة فقط دون معلومات حساسة.</p></Modal>}
  </div>;
 }
