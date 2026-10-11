@@ -11,7 +11,7 @@ import {Audit,Beneficiaries,Dashboard,Generic,Modal,ProfileModal} from './portal
 export default function Portal(){
  const [session,setSession]=useState<Session|null>(null);
  const [ready,setReady]=useState(false);
- const [role,setRole]=useState('none');
+ const [role,setRole]=useState('checking');
  const [section,setSection]=useState<Section>('dashboard');
  const [reports,setReports]=useState<Row[]>([]);
  const [data,setData]=useState<Record<string,Row[]>>({});
@@ -29,13 +29,12 @@ export default function Portal(){
  const [qr,setQr]=useState<{title:string;src:string}|null>(null);
  const [criticalOnly,setCriticalOnly]=useState(false);
  const adminEmail=process.env.NEXT_PUBLIC_ADMIN_EMAIL?.toLowerCase().trim();
- const allowed=!!session&&role!=='none';
+ const allowed=!!session&&role!=='none'&&role!=='checking';
 
  useEffect(()=>{
   if(!db){setReady(true);return;}
   db.auth.getSession().then(({data})=>{setSession(data.session);setReady(true)});
   const {data:s}=db.auth.onAuthStateChange((_e,x)=>setSession(x));
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
   return()=>s.subscription.unsubscribe();
  },[]);
  useEffect(()=>{void resolveRole();},[session]);
@@ -43,9 +42,14 @@ export default function Portal(){
 
  async function resolveRole(){
   if(!db||!session){setRole('none');return;}
+  setRole('checking');
   const {data,error}=await db.rpc('portal_role');
-  if(error){setRole(session.user.email?.toLowerCase()===adminEmail?'admin':'none');return;}
-  setRole(String(data||'none'));
+  if(error){
+   setRole(session.user.email?.toLowerCase().trim()===adminEmail?'admin':'none');
+   return;
+  }
+  const normalized=String(data??'none').trim().toLowerCase();
+  setRole(normalized&&normalized!=='none'?normalized:'none');
  }
 
  async function loadAll(){
@@ -73,7 +77,7 @@ export default function Portal(){
  const currentRows=section==='beneficiaries'?reports:(data[section]??[]).filter(r=>section==='audit'||!r.archived);
  const filteredRows=useMemo(()=>{const q=search.trim().toLowerCase();let rows=currentRows;if(criticalOnly&&section==='followups')rows=rows.filter(r=>r.status==='متأخر'||['عاجلة','عالية'].includes(r.priority));if(!q)return rows;return rows.filter(r=>Object.values(r).some(v=>String(v??'').toLowerCase().includes(q)));},[currentRows,search,criticalOnly,section]);
 
- async function signIn(e:FormEvent){e.preventDefault();if(!db)return;setMessage('');const {error}=await db.auth.signInWithPassword({email:(email||adminEmail||'').trim(),password});setPassword('');if(error)setMessage('تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور.');}
+ async function signIn(e:FormEvent){e.preventDefault();if(!db)return;setMessage('');setRole('checking');const {error}=await db.auth.signInWithPassword({email:(email||adminEmail||'').trim(),password});setPassword('');if(error){setRole('none');setMessage('تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور.');}}
  function add(){setEditing(null);setForm(section==='beneficiaries'?{data_classification:'بيانات تقرير'}:section==='approvals'?{status:'قيد المراجعة'}:section==='followups'?{priority:'متوسطة',status:'مفتوح'}:section==='contracts'?{due_day:27,status:'نشط'}:{});setShowForm(true);}
  function edit(r:Row){setEditing(r);setForm({...r});setShowForm(true);}
  function cancel(){setShowForm(false);setEditing(null);setForm({});}
@@ -88,6 +92,7 @@ export default function Portal(){
 
  if(!ready)return <div className="center"><div className="loader"/></div>;
  if(!configured)return <div className="center"><div className="login-card"><div className="mark">و</div><h1>بوابة وصول</h1><p>إعدادات الاتصال بقاعدة البيانات غير مكتملة.</p></div></div>;
+ if(session&&role==='checking')return <div className="center"><div className="login-card"><div className="mark">و</div><h1>بوابة إدارة وصول</h1><p>جارٍ التحقق من صلاحية الحساب…</p><div className="loader"/></div></div>;
  if(!session||!allowed)return <div className="login-page"><div className="login-card"><div className="mark">و</div><span className="eyebrow">جمعية الأسر المنتجة بجازان</span><h1>بوابة إدارة وصول</h1><p>دخول المستخدم المخول</p>{session&&role==='none'?<><div className="alert">هذا الحساب غير مخوّل داخل منصة وصول.</div><button className="primary" onClick={()=>db?.auth.signOut()}>تسجيل الخروج</button></>:<form onSubmit={signIn}><label>البريد الإلكتروني<input type="email" required value={email||adminEmail||''} onChange={e=>setEmail(e.target.value)}/></label><label>كلمة المرور<input type="password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary">دخول المنصة</button></form>}{message&&<div className="alert">{message}</div>}</div></div>;
 
  const fields=section==='beneficiaries'?beneficiaryFields:(configs[section]?.fields??[]);
