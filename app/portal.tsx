@@ -29,20 +29,21 @@ export default function Portal(){
  const [qr,setQr]=useState<{title:string;src:string}|null>(null);
  const [criticalOnly,setCriticalOnly]=useState(false);
  const adminEmail=process.env.NEXT_PUBLIC_ADMIN_EMAIL?.toLowerCase().trim();
- const allowed=!!session&&role!=='none'&&role!=='checking'&&role!=='error';
+ const allowed=!!session&&role==='admin';
 
  useEffect(()=>{
   if(!db){setReady(true);return;}
+  const startupTimeout=window.setTimeout(()=>{if(mounted){setReady(true);setMessage('تعذر التحقق من الجلسة. يمكنك إعادة تسجيل الدخول.');}},10000);
   let mounted=true;
   db.auth.getSession().then(({data})=>{
    if(!mounted)return;
    setSession(data.session);
-   setReady(true);
-  }).catch(()=>{if(mounted)setReady(true)});
+   setReady(true);window.clearTimeout(startupTimeout);
+  }).catch(()=>{if(mounted)setReady(true);window.clearTimeout(startupTimeout)});
   const {data:s}=db.auth.onAuthStateChange((_e,x)=>{
    window.setTimeout(()=>{if(mounted)setSession(x)},0);
   });
-  return()=>{mounted=false;s.subscription.unsubscribe();};
+  return()=>{mounted=false;window.clearTimeout(startupTimeout);s.subscription.unsubscribe();};
  },[]);
  useEffect(()=>{
   if(!session){setRole('none');return;}
@@ -68,7 +69,7 @@ export default function Portal(){
     return;
    }
    const normalized=String(data??'none').trim().toLowerCase();
-   setRole(normalized&&normalized!=='none'?normalized:'none');
+   setRole(normalized==='admin'?'admin':'none');
   }catch{
    if(timeoutId)window.clearTimeout(timeoutId);
    setMessage('استغرق التحقق من الصلاحية وقتًا أطول من المتوقع. أعد المحاولة.');
