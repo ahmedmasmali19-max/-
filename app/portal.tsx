@@ -33,7 +33,7 @@ export default function Portal(){
 
  useEffect(()=>{
   if(!db){setReady(true);return;}
-  const startupTimeout=window.setTimeout(()=>{if(mounted){setReady(true);setMessage('تعذر التحقق من الجلسة. يمكنك إعادة تسجيل الدخول.');}},10000);
+  const startupTimeout=window.setTimeout(()=>{if(mounted){setSession(null);setReady(true);setMessage('تعذر تجهيز الجلسة. حاول تسجيل الدخول مرة أخرى.');}},10000);
   let mounted=true;
   db.auth.getSession().then(({data})=>{
    if(!mounted)return;
