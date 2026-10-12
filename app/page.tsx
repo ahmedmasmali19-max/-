@@ -1,9 +1,5 @@
-import Portal from './portal';
-import DashboardPersonalizer from './dashboard-personalizer';
+import PortalRecovery from './portal-recovery';
 
 export default function Home(){
-  return <>
-    <DashboardPersonalizer/>
-    <Portal/>
-  </>;
+  return <PortalRecovery/>;
 }
