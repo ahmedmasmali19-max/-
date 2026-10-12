@@ -29,27 +29,58 @@ export default function Portal(){
  const [qr,setQr]=useState<{title:string;src:string}|null>(null);
  const [criticalOnly,setCriticalOnly]=useState(false);
  const adminEmail=process.env.NEXT_PUBLIC_ADMIN_EMAIL?.toLowerCase().trim();
- const allowed=!!session&&role!=='none'&&role!=='checking';
+ const allowed=!!session&&role!=='none'&&role!=='checking'&&role!=='error';
 
  useEffect(()=>{
   if(!db){setReady(true);return;}
-  db.auth.getSession().then(({data})=>{setSession(data.session);setReady(true)});
-  const {data:s}=db.auth.onAuthStateChange((_e,x)=>setSession(x));
-  return()=>s.subscription.unsubscribe();
+  let mounted=true;
+  db.auth.getSession().then(({data})=>{
+   if(!mounted)return;
+   setSession(data.session);
+   setReady(true);
+  }).catch(()=>{if(mounted)setReady(true)});
+  const {data:s}=db.auth.onAuthStateChange((_e,x)=>{
+   window.setTimeout(()=>{if(mounted)setSession(x)},0);
+  });
+  return()=>{mounted=false;s.subscription.unsubscribe();};
  },[]);
- useEffect(()=>{void resolveRole();},[session]);
+ useEffect(()=>{
+  if(!session){setRole('none');return;}
+  setRole('checking');
+  const timer=window.setTimeout(()=>{void resolveRole(session);},0);
+  return()=>window.clearTimeout(timer);
+ },[session]);
  useEffect(()=>{if(allowed)void loadAll();},[allowed]);
 
- async function resolveRole(){
-  if(!db||!session){setRole('none');return;}
-  setRole('checking');
-  const {data,error}=await db.rpc('portal_role');
-  if(error){
-   setRole(session.user.email?.toLowerCase().trim()===adminEmail?'admin':'none');
-   return;
+ async function resolveRole(currentSession:Session){
+  if(!db){setRole('error');return;}
+  let timeoutId:number|undefined;
+  try{
+   const timeout=new Promise<never>((_,reject)=>{
+    timeoutId=window.setTimeout(()=>reject(new Error('role_timeout')),10000);
+   });
+   const result=await Promise.race([db.rpc('portal_role'),timeout]);
+   if(timeoutId)window.clearTimeout(timeoutId);
+   const {data,error}=result as {data:unknown,error:unknown};
+   if(error){
+    setMessage('تعذر التحقق من صلاحية الحساب. أعد المحاولة.');
+    setRole('error');
+    return;
+   }
+   const normalized=String(data??'none').trim().toLowerCase();
+   setRole(normalized&&normalized!=='none'?normalized:'none');
+  }catch{
+   if(timeoutId)window.clearTimeout(timeoutId);
+   setMessage('استغرق التحقق من الصلاحية وقتًا أطول من المتوقع. أعد المحاولة.');
+   setRole('error');
   }
-  const normalized=String(data??'none').trim().toLowerCase();
-  setRole(normalized&&normalized!=='none'?normalized:'none');
+ }
+
+ function retryRole(){
+  if(!session){setRole('none');return;}
+  setMessage('');
+  setRole('checking');
+  window.setTimeout(()=>{void resolveRole(session);},0);
  }
 
  async function loadAll(){
@@ -93,6 +124,7 @@ export default function Portal(){
  if(!ready)return <div className="center"><div className="loader"/></div>;
  if(!configured)return <div className="center"><div className="login-card"><div className="mark">و</div><h1>بوابة وصول</h1><p>إعدادات الاتصال بقاعدة البيانات غير مكتملة.</p></div></div>;
  if(session&&role==='checking')return <div className="center"><div className="login-card"><div className="mark">و</div><h1>بوابة إدارة وصول</h1><p>جارٍ التحقق من صلاحية الحساب…</p><div className="loader"/></div></div>;
+ if(session&&role==='error')return <div className="login-page"><div className="login-card"><div className="mark">و</div><span className="eyebrow">جمعية الأسر المنتجة بجازان</span><h1>تعذر التحقق من الصلاحية</h1><p>{message||'تعذر إكمال فحص صلاحية الحساب.'}</p><button className="primary" onClick={retryRole}>إعادة المحاولة</button><button className="ghost" onClick={()=>db?.auth.signOut()}>تسجيل الخروج</button></div></div>;
  if(!session||!allowed)return <div className="login-page"><div className="login-card"><div className="mark">و</div><span className="eyebrow">جمعية الأسر المنتجة بجازان</span><h1>بوابة إدارة وصول</h1><p>دخول المستخدم المخول</p>{session&&role==='none'?<><div className="alert">هذا الحساب غير مخوّل داخل منصة وصول.</div><button className="primary" onClick={()=>db?.auth.signOut()}>تسجيل الخروج</button></>:<form onSubmit={signIn}><label>البريد الإلكتروني<input type="email" required value={email||adminEmail||''} onChange={e=>setEmail(e.target.value)}/></label><label>كلمة المرور<input type="password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary">دخول المنصة</button></form>}{message&&<div className="alert">{message}</div>}</div></div>;
 
  const fields=section==='beneficiaries'?beneficiaryFields:(configs[section]?.fields??[]);
