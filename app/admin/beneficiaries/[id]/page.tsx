@@ -88,14 +88,35 @@ export default function Beneficiary360Page(){
 
  async function saveEdit(e:FormEvent){
   e.preventDefault();if(!db||!canEdit||busy)return;setBusy(true);setMessage('');
-  const results=[] as any[];
-  results.push(await db.from('beneficiaries').update({full_name:editForm.full_name,phone:editForm.phone||null,status:editForm.beneficiary_status||null}).eq('id',id));
-  if(report?.id)results.push(await db.from('beneficiary_report_details').update({beneficiary_name:editForm.full_name,vehicle_type:editForm.make_model||null,notes:editForm.notes||null}).eq('id',report.id));
-  if(primaryVehicle?.id)results.push(await db.from('vehicles').update({plate_number:editForm.plate_number,make_model:editForm.make_model||null,model_year:editForm.model_year?Number(editForm.model_year):null,status:editForm.vehicle_status||null}).eq('id',primaryVehicle.id));
-  if(activeContract?.id)results.push(await db.from('contracts').update({reference:editForm.reference,beneficiary_name:editForm.full_name,vehicle_plate:editForm.plate_number||null,monthly_amount:editForm.monthly_amount?Number(editForm.monthly_amount):null,start_date:editForm.start_date||null,duration_months:editForm.duration_months?Number(editForm.duration_months):null,due_day:editForm.due_day?Number(editForm.due_day):null,total_amount:editForm.total_amount?Number(editForm.total_amount):null,status:editForm.contract_status||null}).eq('id',activeContract.id));
-  const err=results.find(x=>x.error)?.error;
-  if(err){setMessage(`تعذر حفظ بعض التعديلات: ${err.message}`);setBusy(false);return;}
-  setMessage('تم حفظ بيانات المستفيد والمركبة والعقد بنجاح.');setEditOpen(false);await loadData();setBusy(false);
+  const fullName=String(editForm.full_name||'').trim();
+  if(!fullName){setMessage('اسم المستفيد مطلوب.');setBusy(false);return;}
+  if(primaryVehicle?.id&&!String(editForm.plate_number||'').trim()){setMessage('رقم لوحة المركبة مطلوب.');setBusy(false);return;}
+  if(activeContract?.id&&!String(editForm.reference||'').trim()){setMessage('مرجع العقد مطلوب.');setBusy(false);return;}
+  const dueDay=editForm.due_day?Number(editForm.due_day):null;
+  if(dueDay!==null&&(dueDay<1||dueDay>31)){setMessage('يوم الاستحقاق يجب أن يكون بين 1 و31.');setBusy(false);return;}
+  const {error}=await db.rpc('update_beneficiary_360',{
+   p_beneficiary_id:id,
+   p_full_name:fullName,
+   p_phone:String(editForm.phone||'')||null,
+   p_beneficiary_status:editForm.beneficiary_status||null,
+   p_report_id:report?.id||null,
+   p_report_notes:editForm.notes||null,
+   p_vehicle_id:primaryVehicle?.id||null,
+   p_plate_number:editForm.plate_number||null,
+   p_make_model:editForm.make_model||null,
+   p_model_year:editForm.model_year?Number(editForm.model_year):null,
+   p_vehicle_status:editForm.vehicle_status||null,
+   p_contract_id:activeContract?.id||null,
+   p_reference:editForm.reference||null,
+   p_monthly_amount:editForm.monthly_amount!==''&&editForm.monthly_amount!==null&&editForm.monthly_amount!==undefined?Number(editForm.monthly_amount):null,
+   p_start_date:editForm.start_date||null,
+   p_duration_months:editForm.duration_months?Number(editForm.duration_months):null,
+   p_due_day:dueDay,
+   p_total_amount:editForm.total_amount!==''&&editForm.total_amount!==null&&editForm.total_amount!==undefined?Number(editForm.total_amount):null,
+   p_contract_status:editForm.contract_status||null
+  });
+  if(error){setMessage(`تعذر حفظ التعديلات: ${error.message}`);setBusy(false);return;}
+  setMessage('تم حفظ جميع بيانات المستفيد والمركبة والعقد في عملية واحدة بنجاح.');setEditOpen(false);await loadData();setBusy(false);
  }
 
  async function uploadDocument(e:FormEvent){
