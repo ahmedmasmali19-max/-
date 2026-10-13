@@ -1,0 +1,5 @@
+'use client';
+
+export default function Print360Enhancer(){
+ return <><div className="wusool-print-head" dir="rtl"><div><b>مشروع وصول</b><span>جمعية الأسر المنتجة بجازان</span></div><h1>تقرير ملف المستفيد 360°</h1><small>نسخة مخصصة للطباعة والحفظ بصيغة PDF</small></div><style jsx global>{`.wusool-print-head{display:none}@media print{body{background:#fff!important}.wusool-print-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #0f7d6d;padding:0 0 14px;margin:0 0 18px;color:#173f3c}.wusool-print-head div{display:grid}.wusool-print-head span,.wusool-print-head small{color:#687b78}.wusool-print-head h1{margin:0;font-size:22px}.profile-page{background:#fff!important}.top-actions,.upload-form,button,.modal-backdrop{display:none!important}.card,.bi-card,.in-card,.tl-card{break-inside:avoid;box-shadow:none!important}.top{border-bottom:1px solid #ccd9d6!important;margin-bottom:14px!important}.top>a{display:none!important}@page{size:A4;margin:12mm}}`}</style></>;
+}
