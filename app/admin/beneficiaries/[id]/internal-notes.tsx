@@ -1,0 +1,20 @@
+'use client';
+
+import {FormEvent,useEffect,useState} from 'react';
+import {useParams} from 'next/navigation';
+import {db} from '../../../../lib/db';
+
+type Row=Record<string,any>;
+
+export default function InternalNotes(){
+ const params=useParams<{id:string}>();const id=String(params?.id||'');
+ const [role,setRole]=useState('checking');const [rows,setRows]=useState<Row[]>([]);const [note,setNote]=useState('');const [busy,setBusy]=useState(false);const [message,setMessage]=useState('');
+ useEffect(()=>{void boot()},[id]);
+ async function boot(){if(!db||!id)return;const {data:{session}}=await db.auth.getSession();if(!session)return;const {data:r}=await db.rpc('portal_role');const rr=String(r||'').toLowerCase();setRole(rr);if(!['admin','project_manager','management'].includes(rr))return;await load();}
+ async function load(){if(!db)return;const {data}=await db.from('beneficiary_internal_notes').select('*').eq('beneficiary_id',id).order('created_at',{ascending:false});setRows(data??[]);}
+ const canEdit=['admin','project_manager'].includes(role);
+ async function add(e:FormEvent){e.preventDefault();if(!db||!canEdit||!note.trim()||busy)return;setBusy(true);setMessage('');const {error}=await db.from('beneficiary_internal_notes').insert({beneficiary_id:id,note:note.trim()});if(error){setMessage('تعذر حفظ الملاحظة الداخلية.');setBusy(false);return;}setNote('');setMessage('تم حفظ الملاحظة الداخلية.');await load();setBusy(false);}
+ async function remove(rowId:string){if(!db||!canEdit||busy)return;setBusy(true);const {error}=await db.from('beneficiary_internal_notes').delete().eq('id',rowId);if(error)setMessage('تعذر حذف الملاحظة.');else{setMessage('تم حذف الملاحظة.');await load();}setBusy(false);}
+ if(!['admin','project_manager','management'].includes(role))return null;
+ return <section className="in-wrap" dir="rtl"><div className="in-card"><div className="in-head"><div><span>خاص بالإدارة</span><h2>ملاحظات داخلية</h2></div><b>لا تظهر للمستفيد</b></div>{canEdit&&<form onSubmit={add}><textarea rows={3} value={note} onChange={e=>setNote(e.target.value)} placeholder="أضف ملاحظة داخلية عن المستفيد أو العقد أو المتابعة…"/><button disabled={busy||!note.trim()}>{busy?'جارٍ الحفظ…':'إضافة ملاحظة'}</button></form>}{message&&<div className="in-note">{message}</div>}<div className="in-list">{rows.length?rows.map(r=><article key={r.id}><div><p>{r.note}</p><small>{new Date(r.created_at).toLocaleString('ar-SA')}</small></div>{canEdit&&<button onClick={()=>void remove(r.id)}>حذف</button>}</article>):<p className="in-empty">لا توجد ملاحظات داخلية حتى الآن.</p>}</div></div><style jsx global>{`.in-wrap{max-width:1440px;margin:0 auto 24px;padding:0 28px;font-family:Tahoma,Arial,sans-serif;color:#183d39}.in-card{background:#fff;border:1px solid #e1ebe8;border-radius:20px;padding:18px}.in-head{display:flex;justify-content:space-between;gap:12px;align-items:center}.in-head span{color:#8a6c2d;font-size:12px;font-weight:800}.in-head h2{margin:4px 0 12px}.in-head>b{background:#fff3d4;color:#7d5d16;padding:7px 10px;border-radius:999px;font-size:11px}.in-card form{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}.in-card textarea{padding:11px;border:1px solid #d8e6e3;border-radius:10px;resize:vertical}.in-card form button{border:0;background:#0d5f57;color:#fff;padding:11px 14px;border-radius:10px;font-weight:800}.in-note{margin-top:10px;background:#eef8f5;padding:10px;border-radius:10px}.in-list{display:grid;gap:8px;margin-top:14px}.in-list article{display:flex;justify-content:space-between;gap:12px;padding:12px;background:#f8fbfa;border:1px solid #edf2f0;border-radius:12px}.in-list p{margin:0}.in-list small{display:block;margin-top:6px;color:#82908d}.in-list article>button{border:1px solid #ead7d7;background:#fff;color:#a14444;border-radius:9px;padding:7px 10px;height:max-content}.in-empty{color:#81908e;text-align:center;padding:16px}@media(max-width:650px){.in-wrap{padding:0 12px}.in-card form{grid-template-columns:1fr}}@media print{.in-wrap{display:none}}`}</style></section>
+}
