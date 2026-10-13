@@ -5,10 +5,12 @@ import ManagerBeneficiaryAccountsPanel from './manager-beneficiary-accounts-pane
 import SidebarRequestsLink from './sidebar-requests-link';
 import Beneficiary360Links from './beneficiary-360-links';
 import ManagementReadonlyGuard from './management-readonly-guard';
+import DashboardLiveMetrics from './dashboard-live-metrics';
 
 export default function Home(){
   return <>
     <DashboardPersonalizer/>
+    <DashboardLiveMetrics/>
     <SidebarRequestsLink/>
     <Beneficiary360Links/>
     <ManagementReadonlyGuard/>
