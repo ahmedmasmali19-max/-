@@ -5,112 +5,85 @@ import type {Session} from '@supabase/supabase-js';
 import {db,configured} from '../../lib/db';
 
 type Row=Record<string,any>;
-type Mode='accident'|'request'|'maintenance'|'document';
+type RequestMode='accident'|'maintenance'|'document'|'request';
+type Tab='home'|'installments'|'requests'|'documents'|'operations'|'ownership';
 
-const modeTitle:Record<Mode,string>={
-  accident:'بلاغ حادث',
-  request:'طلب عام',
-  maintenance:'طلب صيانة',
-  document:'رفع مستند'
-};
+const requestTitle:Record<RequestMode,string>={accident:'بلاغ حادث',maintenance:'طلب صيانة',document:'رفع مستند',request:'طلب عام'};
+const requiredDocs=['هوية','رخصة','عقد','تأمين','استمارة'];
+const money=(v:any)=>`${Number(v||0).toLocaleString('ar-SA')} ر.س`;
+const date=(v:any)=>v?new Date(v).toLocaleDateString('ar-SA'):'—';
 
 export default function BeneficiaryPortal(){
-  const [session,setSession]=useState<Session|null>(null);
-  const [email,setEmail]=useState('');
-  const [password,setPassword]=useState('');
-  const [busy,setBusy]=useState(false);
-  const [loading,setLoading]=useState(false);
-  const [message,setMessage]=useState('');
-  const [beneficiary,setBeneficiary]=useState<Row|null>(null);
-  const [vehicle,setVehicle]=useState<Row|null>(null);
-  const [contract,setContract]=useState<Row|null>(null);
-  const [installments,setInstallments]=useState<Row[]>([]);
-  const [submissions,setSubmissions]=useState<Row[]>([]);
-  const [mode,setMode]=useState<Mode>('request');
-  const [title,setTitle]=useState('');
-  const [details,setDetails]=useState('');
-  const [amount,setAmount]=useState('');
-  const [eventDate,setEventDate]=useState('');
-  const [file,setFile]=useState<File|null>(null);
+ const [session,setSession]=useState<Session|null>(null);
+ const [email,setEmail]=useState('');const [password,setPassword]=useState('');
+ const [busy,setBusy]=useState(false);const [loading,setLoading]=useState(false);const [message,setMessage]=useState('');
+ const [tab,setTab]=useState<Tab>('home');
+ const [snap,setSnap]=useState<Row>({});
+ const [mode,setMode]=useState<RequestMode>('request');const [title,setTitle]=useState('');const [details,setDetails]=useState('');const [eventDate,setEventDate]=useState('');const [file,setFile]=useState<File|null>(null);
+ const [paymentInstallmentId,setPaymentInstallmentId]=useState('');const [paymentAmount,setPaymentAmount]=useState('');const [paymentFile,setPaymentFile]=useState<File|null>(null);
 
-  useEffect(()=>{
-    if(!db)return;
-    let active=true;
-    db.auth.getSession().then(({data})=>{if(active){setSession(data.session);if(data.session)void loadPortal(data.session);}});
-    const {data:s}=db.auth.onAuthStateChange((_event,next)=>{setSession(next);if(next)void loadPortal(next);else resetData();});
-    return()=>{active=false;s.subscription.unsubscribe();};
-  },[]);
+ useEffect(()=>{if(!db)return;let active=true;db.auth.getSession().then(({data})=>{if(active){setSession(data.session);if(data.session)void load(data.session);}});const {data:s}=db.auth.onAuthStateChange((_e,next)=>{setSession(next);if(next)void load(next);else setSnap({});});return()=>{active=false;s.subscription.unsubscribe();};},[]);
 
-  function resetData(){
-    setBeneficiary(null);setVehicle(null);setContract(null);setInstallments([]);setSubmissions([]);
-  }
+ async function load(_current?:Session){
+  if(!db)return;setLoading(true);setMessage('');
+  const {data,error}=await db.rpc('get_beneficiary_portal_snapshot');
+  if(error||!data){setMessage('تعذر تحميل بيانات حسابك أو أن الحساب غير مربوط بمستفيد في مشروع وصول.');setLoading(false);return;}
+  const s=data as Row;setSnap(s);
+  const unpaid=(s.installments??[]).filter((x:Row)=>Number(x.paid_amount||0)<Number(x.amount||0));
+  if(unpaid[0]){setPaymentInstallmentId(unpaid[0].id);setPaymentAmount(String(Math.max(0,Number(unpaid[0].amount||0)-Number(unpaid[0].paid_amount||0))))}
+  setLoading(false);
+ }
 
-  async function loadPortal(current:Session){
-    if(!db)return;
-    setLoading(true);setMessage('');
-    const {data:bid,error:bidError}=await db.rpc('current_beneficiary_id');
-    if(bidError||!bid){
-      setMessage('لم يتم ربط هذا الحساب بمستفيد في مشروع وصول. تواصل مع إدارة المشروع.');
-      setLoading(false);return;
-    }
-    const [b,v,c,s]=await Promise.all([
-      db.from('beneficiaries').select('*').eq('id',bid).maybeSingle(),
-      db.from('vehicles').select('*').eq('beneficiary_id',bid).limit(1).maybeSingle(),
-      db.from('contracts').select('*').eq('beneficiary_id',bid).eq('archived',false).limit(1).maybeSingle(),
-      db.from('beneficiary_submissions').select('*').order('created_at',{ascending:false})
-    ]);
-    setBeneficiary(b.data??null);setVehicle(v.data??null);setContract(c.data??null);setSubmissions(s.data??[]);
-    if(c.data?.id){
-      const ins=await db.from('installments').select('*').eq('contract_id',c.data.id).eq('archived',false).order('installment_no',{ascending:true});
-      setInstallments(ins.data??[]);
-    }else setInstallments([]);
-    setLoading(false);
-  }
+ async function signIn(e:FormEvent){e.preventDefault();if(!db||busy)return;setBusy(true);setMessage('');const {data,error}=await db.auth.signInWithPassword({email:email.trim(),password});setPassword('');if(error||!data.session){setMessage('تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور.');setBusy(false);return;}setSession(data.session);await load(data.session);setBusy(false);}
 
-  async function signIn(e:FormEvent){
-    e.preventDefault();if(!db||busy)return;
-    setBusy(true);setMessage('');
-    const {data,error}=await db.auth.signInWithPassword({email:email.trim(),password});
-    setPassword('');
-    if(error||!data.session){setMessage('تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور.');setBusy(false);return;}
-    setSession(data.session);await loadPortal(data.session);setBusy(false);
-  }
+ const beneficiary=snap.beneficiary||null;const vehicle=snap.vehicle||null;const contract=snap.contract||null;
+ const installments:Row[]=snap.installments??[];const submissions:Row[]=snap.submissions??[];const documents:Row[]=snap.documents??[];const accidents:Row[]=snap.accidents??[];const maintenance:Row[]=snap.maintenance??[];const ownership:Row[]=snap.ownership??[];const notifications:Row[]=snap.notifications??[];
+ const unpaid=useMemo(()=>installments.filter(x=>Number(x.paid_amount||0)<Number(x.amount||0)),[installments]);
+ const selectedInstallment=useMemo(()=>unpaid.find(x=>x.id===paymentInstallmentId)||null,[unpaid,paymentInstallmentId]);
+ const remaining=selectedInstallment?Math.max(0,Number(selectedInstallment.amount||0)-Number(selectedInstallment.paid_amount||0)):0;
+ const paidCount=installments.filter(x=>Number(x.paid_amount||0)>=Number(x.amount||0)&&Number(x.amount||0)>0).length;
+ const paidTotal=installments.reduce((s,x)=>s+Number(x.paid_amount||0),0);
+ const remainingTotal=installments.reduce((s,x)=>s+Math.max(0,Number(x.amount||0)-Number(x.paid_amount||0)),0);
+ const nextInstallment=unpaid[0]||null;
+ const pending=submissions.filter(x=>x.status==='قيد المراجعة').length;
+ const openAccidents=accidents.filter(x=>!['مكتمل','مغلق'].includes(String(x.repair_status||''))).length;
+ const openMaintenance=maintenance.filter(x=>!['مكتمل','منجز','مغلق'].includes(String(x.status||''))).length;
 
-  async function submit(e:FormEvent){
-    e.preventDefault();if(!db||!session||!beneficiary||busy)return;
-    setBusy(true);setMessage('');
-    let attachmentPath:string|null=null;
-    if(file){
-      const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-      attachmentPath=`${session.user.id}/${Date.now()}-${safe}`;
-      const up=await db.storage.from('beneficiary-uploads').upload(attachmentPath,file,{upsert:false,contentType:file.type||undefined});
-      if(up.error){setMessage('تعذر رفع المرفق. حاول مرة أخرى.');setBusy(false);return;}
-    }
-    const finalTitle=title.trim()||modeTitle[mode];
-    const {error}=await db.from('beneficiary_submissions').insert({
-      user_id:session.user.id,
-      beneficiary_id:beneficiary.id,
-      submission_type:mode,
-      title:finalTitle,
-      details:details.trim()||null,
-      amount:amount?Number(amount):null,
-      event_date:eventDate||null,
-      attachment_path:attachmentPath,
-      status:'قيد المراجعة'
-    });
-    if(error){if(attachmentPath)await db.storage.from('beneficiary-uploads').remove([attachmentPath]);setMessage('تعذر إرسال الطلب. حاول مرة أخرى.');setBusy(false);return;}
-    setTitle('');setDetails('');setAmount('');setEventDate('');setFile(null);
-    setMessage('تم إرسال الطلب بنجاح وهو الآن قيد مراجعة إدارة المشروع.');
-    await loadPortal(session);setBusy(false);
-  }
+ function docValid(t:string){return documents.some(d=>{const match=String(d.document_type||'').includes(t)||String(d.title||'').includes(t);const active=!d.status||['نشط','معتمد','ساري'].includes(String(d.status));const valid=!d.expiry_date||new Date(d.expiry_date).getTime()>=new Date(new Date().toDateString()).getTime();return match&&active&&valid;});}
+ const docsReady=requiredDocs.filter(docValid).length;const paidDone=installments.length>0&&remainingTotal<=0;const currentTransfer=ownership[0]||null;const ownershipReady=paidDone&&docsReady===requiredDocs.length;
 
-  const isPaid=(i:Row)=>['مدفوع','مسدد'].includes(String(i.status||''))||Number(i.paid_amount||0)>=Number(i.amount||0);
-  const nextInstallment=useMemo(()=>installments.find(i=>!isPaid(i))??null,[installments]);
-  const paid=useMemo(()=>installments.filter(isPaid).length,[installments]);
+ async function upload(pathPrefix:string,f:File){if(!db||!session)throw new Error('no session');if(f.size>10*1024*1024)throw new Error('الملف أكبر من 10 ميجابايت.');const safe=f.name.replace(/[^a-zA-Z0-9._-]/g,'_');const path=`${session.user.id}/${pathPrefix}-${Date.now()}-${safe}`;const up=await db.storage.from('beneficiary-uploads').upload(path,f,{upsert:false,contentType:f.type||undefined});if(up.error)throw up.error;return path;}
 
-  if(!configured)return <div className="login-page"><div className="login-card"><h1>بوابة المستفيد</h1><p>إعدادات الاتصال غير مكتملة.</p></div></div>;
+ async function submitPayment(e:FormEvent){e.preventDefault();if(!db||!session||!beneficiary||!selectedInstallment||!paymentFile||busy)return;setBusy(true);setMessage('');try{const n=Number(paymentAmount);if(!Number.isFinite(n)||n<=0)throw new Error('أدخل مبلغًا صحيحًا.');if(n>remaining)throw new Error(`المبلغ أكبر من المتبقي على القسط (${money(remaining)}).`);const duplicate=submissions.some(s=>s.submission_type==='installment'&&s.installment_id===selectedInstallment.id&&s.status==='قيد المراجعة');if(duplicate)throw new Error('يوجد إثبات سداد لهذا القسط قيد المراجعة بالفعل.');const path=await upload('payment',paymentFile);const {error}=await db.from('beneficiary_submissions').insert({user_id:session.user.id,beneficiary_id:beneficiary.id,submission_type:'installment',title:`إثبات سداد القسط ${selectedInstallment.installment_no??''}`.trim(),details:`مرتبط بالقسط رقم ${selectedInstallment.installment_no??'—'} المستحق بتاريخ ${selectedInstallment.due_date||'—'}`,amount:n,event_date:new Date().toISOString().slice(0,10),attachment_path:path,installment_id:selectedInstallment.id,status:'قيد المراجعة'});if(error){await db.storage.from('beneficiary-uploads').remove([path]);throw error;}setMessage('تم إرسال إثبات السداد للإدارة وهو قيد المراجعة.');setPaymentFile(null);await load();}catch(err:any){setMessage(err?.message||'تعذر إرسال إثبات السداد.');}finally{setBusy(false);}}
 
-  if(!session)return <div className="login-page"><div className="login-card"><div className="mark">و</div><span className="eyebrow">مشروع وصول</span><h1>بوابة المستفيد</h1><p>سجّل الدخول للوصول إلى بياناتك وطلباتك.</p><form onSubmit={signIn}><label>البريد الإلكتروني<input type="email" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>كلمة المرور<input type="password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary" disabled={busy}>{busy?'جارٍ الدخول…':'دخول'}</button></form>{message&&<div className="alert">{message}</div>}</div></div>;
+ async function submitRequest(e:FormEvent){e.preventDefault();if(!db||!session||!beneficiary||busy)return;setBusy(true);setMessage('');let path:string|null=null;try{if(file)path=await upload(mode,file);const {error}=await db.from('beneficiary_submissions').insert({user_id:session.user.id,beneficiary_id:beneficiary.id,submission_type:mode,title:title.trim()||requestTitle[mode],details:details.trim()||null,event_date:eventDate||null,attachment_path:path,status:'قيد المراجعة'});if(error){if(path)await db.storage.from('beneficiary-uploads').remove([path]);throw error;}setTitle('');setDetails('');setEventDate('');setFile(null);setMessage('تم إرسال الطلب بنجاح للإدارة.');await load();}catch(err:any){setMessage(err?.message||'تعذر إرسال الطلب.');}finally{setBusy(false);}}
 
-  return <div className="app-shell"><aside className="sidebar"><div className="brand"><div className="mark">و</div><div><b>وصول</b><small>بوابة المستفيد</small></div></div><nav><button className="active">الرئيسية</button><a href="#installments">الأقساط</a><a href="#submit">إرسال طلب</a><a href="#history">طلباتي</a></nav><div className="side-note"><b>{beneficiary?.full_name||'مستفيد وصول'}</b><small>{vehicle?.plate_number?`المركبة: ${vehicle.plate_number}`:'بيانات المركبة غير متاحة'}</small></div><button className="signout" onClick={()=>db?.auth.signOut()}>تسجيل الخروج</button></aside><main className="main"><header className="topbar"><div><span className="eyebrow">جمعية الأسر المنتجة بجازان</span><h1>بوابة المستفيد</h1></div><div className="admin-pill">حساب مستفيد</div></header>{message&&<div className="toast">{message}</div>}{loading?<div className="panel center-panel"><div className="loader"/><p>جارٍ تحميل بياناتك…</p></div>:<><section className="hero"><div><span className="hero-label">مرحبًا بك</span><h2>{beneficiary?.full_name||'مستفيد وصول'}</h2><p>من هنا تتابع مركبتك وعقدك وأقساطك وترسل طلباتك مباشرة لإدارة المشروع.</p></div><div className="hero-badge"><strong>{paid}</strong><span>قسط مسدد</span></div></section><div className="kpi-grid"><div className="kpi"><span>المركبة</span><strong>{vehicle?.make_model||'—'}</strong><small>{vehicle?.plate_number||'—'}</small></div><div className="kpi"><span>القسط الشهري</span><strong>{contract?.monthly_amount?Number(contract.monthly_amount).toLocaleString('ar-SA'):'—'}</strong></div><div className="kpi"><span>القسط القادم</span><strong>{nextInstallment?.due_date||'—'}</strong></div><div className="kpi"><span>حالة العقد</span><strong>{contract?.status||'—'}</strong></div></div><section id="installments" className="panel"><div className="panel-head"><h2>الأقساط</h2><span>{installments.length} قسط</span></div><div className="table-wrap"><table><thead><tr><th>رقم القسط</th><th>تاريخ الاستحقاق</th><th>المبلغ</th><th>المدفوع</th><th>الحالة</th></tr></thead><tbody>{installments.map(i=><tr key={i.id}><td>{i.installment_no??'—'}</td><td>{i.due_date??'—'}</td><td>{i.amount??'—'}</td><td>{i.paid_amount??0}</td><td>{i.status??'—'}</td></tr>)}</tbody></table></div></section><section id="submit" className="panel"><div className="panel-head"><div><h2>إرسال طلب جديد</h2><small className="muted">إثباتات السداد تُرفع من قسم الأقساط المخصص أسفل البوابة لربطها بالقسط الصحيح.</small></div><span>يصل مباشرة لإدارة المشروع</span></div><form onSubmit={submit} className="form-grid"><label>نوع الطلب<select value={mode} onChange={e=>setMode(e.target.value as Mode)}><option value="accident">بلاغ حادث</option><option value="maintenance">طلب صيانة</option><option value="document">رفع مستند</option><option value="request">طلب عام</option></select></label><label>عنوان الطلب<input value={title} onChange={e=>setTitle(e.target.value)} placeholder={modeTitle[mode]}/></label><label>التاريخ<input type="date" value={eventDate} onChange={e=>setEventDate(e.target.value)}/></label><label>المبلغ – إن وجد<input type="number" min="0" step="0.01" value={amount} onChange={e=>setAmount(e.target.value)}/></label><label className="full">التفاصيل<textarea value={details} onChange={e=>setDetails(e.target.value)} rows={4}/></label><label className="full">المرفق<input type="file" accept="image/*,.pdf" onChange={e=>setFile(e.target.files?.[0]??null)}/></label><div className="full"><button className="primary" disabled={busy}>{busy?'جارٍ الإرسال…':'إرسال الطلب'}</button></div></form></section><section id="history" className="panel"><div className="panel-head"><h2>طلباتي السابقة</h2><span>{submissions.length} طلب</span></div>{submissions.length===0?<p className="muted">لا توجد طلبات حتى الآن.</p>:<div className="table-wrap"><table><thead><tr><th>النوع</th><th>العنوان</th><th>التاريخ</th><th>الحالة</th><th>ملاحظة الإدارة</th></tr></thead><tbody>{submissions.map(s=><tr key={s.id}><td>{s.submission_type==='installment'?'إثبات سداد قسط':modeTitle[s.submission_type as Mode]||s.submission_type}</td><td>{s.title}</td><td>{new Date(s.created_at).toLocaleDateString('ar-SA')}</td><td>{s.status}</td><td>{s.admin_note||'—'}</td></tr>)}</tbody></table></div>}</section></>}</main></div>;
+ async function markRead(id:string){if(!db)return;const {error}=await db.rpc('mark_beneficiary_notification_read',{p_notification_id:id});if(!error)setSnap((x:Row)=>({...x,notifications:(x.notifications??[]).map((n:Row)=>n.id===id?{...n,is_read:true}:n)}));}
+
+ if(!configured)return <div className="bp-login"><div className="bp-login-card"><h1>بوابة المستفيد</h1><p>إعدادات الاتصال غير مكتملة.</p></div><Style/></div>;
+ if(!session)return <div className="bp-login" dir="rtl"><div className="bp-login-card"><div className="bp-mark">و</div><span>مشروع وصول</span><h1>بوابة المستفيد</h1><p>سجّل الدخول لمتابعة مركبتك وعقدك وأقساطك وطلباتك.</p><form onSubmit={signIn}><label>البريد الإلكتروني<input type="email" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>كلمة المرور<input type="password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button disabled={busy}>{busy?'جارٍ الدخول…':'دخول'}</button></form>{message&&<div className="bp-note">{message}</div>}</div><Style/></div>;
+
+ return <div className="bp" dir="rtl"><aside><div className="bp-brand"><div className="bp-mark">و</div><div><b>وصول</b><small>بوابة المستفيد</small></div></div><nav>{([['home','الرئيسية'],['installments','الأقساط'],['requests','طلباتي'],['documents','المستندات'],['operations','الحوادث والصيانة'],['ownership','نقل الملكية']] as [Tab,string][]).map(([k,l])=><button key={k} className={tab===k?'active':''} onClick={()=>setTab(k)}>{l}</button>)}</nav><div className="bp-user"><b>{beneficiary?.full_name||'مستفيد وصول'}</b><small>{vehicle?.plate_number||'لا توجد لوحة'}</small></div><button className="bp-out" onClick={()=>db?.auth.signOut()}>تسجيل الخروج</button></aside><main><header><div><span>جمعية الأسر المنتجة بجازان</span><h1>مرحبًا {beneficiary?.full_name||''}</h1></div><button onClick={()=>void load()}>تحديث البيانات</button></header>{message&&<div className="bp-note">{message}</div>}{loading?<div className="bp-panel bp-loading">جارٍ تحميل بياناتك…</div>:<>
+
+ {tab==='home'&&<><section className="bp-hero"><div><span>ملفك في مشروع وصول</span><h2>{vehicle?.make_model||'مركبتك'}</h2><p>{vehicle?.plate_number||'—'} • العقد {contract?.reference||'—'}</p></div><div className="bp-progress"><strong>{installments.length?Math.round((paidCount/installments.length)*100):0}%</strong><small>التزام الأقساط</small></div></section><section className="bp-kpis"><K label="القسط القادم" value={nextInstallment?money(Math.max(0,Number(nextInstallment.amount||0)-Number(nextInstallment.paid_amount||0))):'لا يوجد'} sub={date(nextInstallment?.due_date)}/><K label="إجمالي المسدد" value={money(paidTotal)} sub={`${paidCount} قسط مكتمل`}/><K label="المتبقي" value={money(remainingTotal)} sub={contract?.status||'—'}/><K label="طلبات قيد المراجعة" value={pending} sub="متابعة الإدارة"/></section><section className="bp-grid"><div className="bp-panel"><h3>ما يحتاج انتباهك</h3><div className="bp-actions-list"><Status title="القسط القادم" value={nextInstallment?date(nextInstallment.due_date):'لا يوجد'} ok={!nextInstallment}/><Status title="المستندات" value={`${docsReady}/${requiredDocs.length} مكتمل`} ok={docsReady===requiredDocs.length}/><Status title="الحوادث المفتوحة" value={openAccidents} ok={openAccidents===0}/><Status title="الصيانة المفتوحة" value={openMaintenance} ok={openMaintenance===0}/></div></div><div className="bp-panel"><h3>آخر الإشعارات</h3>{notifications.length===0?<Empty text="لا توجد إشعارات."/>:<div className="bp-notifications">{notifications.slice(0,5).map(n=><button key={n.id} className={n.is_read?'':'unread'} onClick={()=>void markRead(n.id)}><b>{n.title}</b><span>{n.message||'—'}</span><small>{new Date(n.created_at).toLocaleString('ar-SA')}</small></button>)}</div>}</div></section></>}
+
+ {tab==='installments'&&<><section className="bp-panel"><div className="bp-head"><div><span>الأقساط</span><h2>سجل السداد</h2></div><b>{money(remainingTotal)} متبقي</b></div><Table headers={['#','الاستحقاق','المبلغ','المسدد','المتبقي','الحالة']} rows={installments.map(i=>[i.installment_no??'—',date(i.due_date),money(i.amount),money(i.paid_amount||0),money(Math.max(0,Number(i.amount||0)-Number(i.paid_amount||0))),i.status||'—'])}/></section><section className="bp-panel"><h2>رفع إثبات سداد لقسط محدد</h2>{unpaid.length===0?<Empty text="لا توجد أقساط غير مسددة."/>:<form className="bp-form pay" onSubmit={submitPayment}><label>القسط<select value={paymentInstallmentId} onChange={e=>{setPaymentInstallmentId(e.target.value);const x=unpaid.find(i=>i.id===e.target.value);if(x)setPaymentAmount(String(Math.max(0,Number(x.amount||0)-Number(x.paid_amount||0))))}}>{unpaid.map(i=><option value={i.id} key={i.id}>قسط {i.installment_no??'—'} • {date(i.due_date)} • {money(Math.max(0,Number(i.amount||0)-Number(i.paid_amount||0)))}</option>)}</select></label><label>المبلغ<input type="number" min="0.01" max={remaining||undefined} step="0.01" value={paymentAmount} onChange={e=>setPaymentAmount(e.target.value)} required/></label><label>إثبات السداد<input type="file" accept="image/*,.pdf" onChange={e=>setPaymentFile(e.target.files?.[0]||null)} required/></label><button disabled={busy||!paymentFile}>{busy?'جارٍ الإرسال…':'إرسال للإدارة'}</button></form>}</section></>}
+
+ {tab==='requests'&&<><section className="bp-panel"><h2>إرسال طلب جديد</h2><form className="bp-form" onSubmit={submitRequest}><label>نوع الطلب<select value={mode} onChange={e=>setMode(e.target.value as RequestMode)}><option value="accident">بلاغ حادث</option><option value="maintenance">طلب صيانة</option><option value="document">رفع مستند</option><option value="request">طلب عام</option></select></label><label>العنوان<input value={title} onChange={e=>setTitle(e.target.value)} placeholder={requestTitle[mode]}/></label><label>التاريخ<input type="date" value={eventDate} onChange={e=>setEventDate(e.target.value)}/></label><label className="full">التفاصيل<textarea rows={4} value={details} onChange={e=>setDetails(e.target.value)}/></label><label className="full">المرفق<input type="file" accept="image/*,.pdf" onChange={e=>setFile(e.target.files?.[0]||null)}/></label><button className="full" disabled={busy}>{busy?'جارٍ الإرسال…':'إرسال الطلب'}</button></form></section><section className="bp-panel"><h2>طلباتي</h2><Table headers={['النوع','العنوان','التاريخ','الحالة','ملاحظة الإدارة']} rows={submissions.map(s=>[s.submission_type==='installment'?'إثبات سداد':requestTitle[s.submission_type as RequestMode]||s.submission_type,s.title,date(s.created_at),s.status,s.admin_note||'—'])}/></section></>}
+
+ {tab==='documents'&&<><section className="bp-kpis"><K label="المكتمل" value={`${docsReady}/${requiredDocs.length}`} sub="المستندات الأساسية"/><K label="الهوية" value={docValid('هوية')?'مكتمل':'مطلوب'}/><K label="الرخصة" value={docValid('رخصة')?'مكتمل':'مطلوب'}/><K label="التأمين" value={docValid('تأمين')?'مكتمل':'مطلوب'}/></section><section className="bp-panel"><h2>مستنداتي</h2><Table headers={['المستند','النوع','الانتهاء','الحالة']} rows={documents.map(d=>[d.title||'—',d.document_type||'—',date(d.expiry_date),d.expiry_date&&new Date(d.expiry_date)<new Date()?'منتهي':d.status||'نشط'])}/></section><section className="bp-panel"><h3>المستندات المطلوبة</h3><div className="bp-checks">{requiredDocs.map(t=><div key={t} className={docValid(t)?'ok':''}><span>{docValid(t)?'✓':'!'}</span><b>{t}</b><small>{docValid(t)?'مكتمل وساري':'يحتاج استكمال'}</small></div>)}</div></section></>}
+
+ {tab==='operations'&&<><section className="bp-grid"><div className="bp-panel"><h2>الحوادث</h2>{accidents.length===0?<Empty text="لا توجد حوادث مسجلة."/>:<div className="bp-cards">{accidents.map(a=><article key={a.id}><b>{a.claim_number?`مطالبة ${a.claim_number}`:'بلاغ حادث'}</b><span>{date(a.accident_date)}</span><strong>{a.repair_status||'قيد المتابعة'}</strong></article>)}</div>}</div><div className="bp-panel"><h2>الصيانة</h2>{maintenance.length===0?<Empty text="لا توجد طلبات صيانة مسجلة."/>:<div className="bp-cards">{maintenance.map(m=><article key={m.id}><b>{m.category||'صيانة'}</b><span>{date(m.due_date)}</span><strong>{m.status||'قيد المتابعة'}</strong></article>)}</div>}</div></section></>}
+
+ {tab==='ownership'&&<><section className="bp-hero ownership"><div><span>جاهزية نقل الملكية</span><h2>{ownershipReady?'مؤهل مبدئيًا لنقل الملكية':'ما زال هناك متطلبات'}</h2><p>{currentTransfer?.status?`الحالة الرسمية: ${currentTransfer.status}`:'لم يبدأ إجراء نقل الملكية بعد.'}</p></div><div className="bp-progress"><strong>{Math.round(((paidDone?1:0)+(docsReady/requiredDocs.length))/2*100)}%</strong><small>الجاهزية</small></div></section><section className="bp-panel"><h2>قائمة التحقق</h2><div className="bp-checks"><Check label="إكمال السداد" ok={paidDone} detail={paidDone?'مكتمل':`متبقي ${money(remainingTotal)}`}/><Check label="المستندات الأساسية" ok={docsReady===requiredDocs.length} detail={`${docsReady}/${requiredDocs.length} مكتمل`}/><Check label="اعتماد الإدارة" ok={Boolean(currentTransfer?.manager_approved)} detail={currentTransfer?.manager_approved?'تم الاعتماد':'بانتظار الجاهزية والإجراء'}/><Check label="إتمام النقل" ok={Boolean(currentTransfer?.transfer_date)} detail={currentTransfer?.transfer_date?date(currentTransfer.transfer_date):'لم يتم بعد'}/></div></section></>}
+ </>}</main><Style/></div>;
 }
+
+function K({label,value,sub}:{label:string,value:any,sub?:any}){return <div className="bp-kpi"><span>{label}</span><strong>{value}</strong>{sub!==undefined&&<small>{sub}</small>}</div>}
+function Status({title,value,ok}:{title:string,value:any,ok:boolean}){return <div className={ok?'ok':''}><span>{ok?'✓':'!'}</span><b>{title}</b><strong>{value}</strong></div>}
+function Check({label,ok,detail}:{label:string,ok:boolean,detail:string}){return <div className={ok?'ok':''}><span>{ok?'✓':'!'}</span><b>{label}</b><small>{detail}</small></div>}
+function Empty({text}:{text:string}){return <div className="bp-empty">{text}</div>}
+function Table({headers,rows}:{headers:string[],rows:any[][]}){return rows.length===0?<Empty text="لا توجد بيانات."/>:<div className="bp-table"><table><thead><tr>{headers.map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{rows.map((r,i)=><tr key={i}>{r.map((c,j)=><td key={j}>{c??'—'}</td>)}</tr>)}</tbody></table></div>}
+function Style(){return <style jsx global>{`
+ body{margin:0;background:#f4f8f7;color:#183d39;font-family:Tahoma,Arial,sans-serif}.bp-login{min-height:100vh;display:grid;place-items:center;padding:20px}.bp-login-card{width:min(430px,100%);background:white;border:1px solid #deebe7;border-radius:24px;padding:32px;text-align:center;box-shadow:0 20px 60px rgba(18,73,66,.10)}.bp-mark{width:48px;height:48px;background:#0d5f57;color:white;border-radius:14px;display:grid;place-items:center;font-size:25px;font-weight:900}.bp-login .bp-mark{margin:auto}.bp-login-card>span{display:block;color:#409b82;margin-top:10px;font-size:12px;font-weight:800}.bp-login-card h1{margin:6px}.bp-login-card p{color:#708581}.bp-login-card form{display:grid;gap:12px;text-align:right}.bp-login-card label,.bp-form label{display:grid;gap:6px;font-size:12px;font-weight:800;color:#31524e}.bp-login-card input,.bp-form input,.bp-form select,.bp-form textarea{padding:11px;border:1px solid #d8e6e3;border-radius:10px;background:white}.bp-login-card button,.bp-form button,header button{border:0;background:#0d5f57;color:white;padding:11px 14px;border-radius:10px;font-weight:800;cursor:pointer}.bp{min-height:100vh;display:flex}.bp aside{width:250px;background:linear-gradient(180deg,#0d5350,#083735);color:white;padding:20px 14px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}.bp-brand{display:flex;gap:10px;align-items:center;padding:4px 6px 24px}.bp-brand b,.bp-brand small{display:block}.bp-brand b{font-size:22px}.bp-brand small{color:#c6ddda}.bp nav{display:grid;gap:5px}.bp nav button{border:0;background:transparent;color:#d9eae7;text-align:right;padding:11px 12px;border-radius:10px;font-weight:800;cursor:pointer}.bp nav button.active,.bp nav button:hover{background:rgba(255,255,255,.12);color:white}.bp-user{margin-top:auto;background:rgba(255,255,255,.08);padding:12px;border-radius:12px}.bp-user b,.bp-user small{display:block}.bp-user small{color:#c4d9d6;margin-top:4px}.bp-out{margin-top:10px;border:1px solid rgba(255,255,255,.18);background:transparent;color:white;padding:10px;border-radius:10px;cursor:pointer}.bp main{flex:1;min-width:0;padding:26px 30px}.bp header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.bp header span{color:#409b82;font-size:12px;font-weight:800}.bp header h1{margin:4px 0 0}.bp-note{background:#eaf7f2;color:#215e54;padding:11px 14px;border-radius:12px;margin-bottom:14px}.bp-hero{background:linear-gradient(120deg,#0f806f,#0d5f57,#123f41);color:white;border-radius:24px;padding:26px 28px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.bp-hero h2{margin:6px 0}.bp-hero p{margin:0;color:#d9ece8}.bp-progress{min-width:110px;aspect-ratio:1;border:1px solid rgba(255,255,255,.2);border-radius:22px;display:grid;place-items:center;align-content:center;background:rgba(255,255,255,.08)}.bp-progress strong{font-size:30px}.bp-progress small{color:#d8ebe7}.bp-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:14px}.bp-kpi,.bp-panel{background:white;border:1px solid #deebe7;border-radius:18px}.bp-kpi{padding:16px}.bp-kpi span,.bp-kpi small{display:block;color:#778b87}.bp-kpi strong{display:block;font-size:20px;margin:6px 0;color:#0d5f57}.bp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.bp-panel{padding:18px;margin-bottom:14px}.bp-panel h2,.bp-panel h3{margin:0 0 14px}.bp-head{display:flex;justify-content:space-between;align-items:center}.bp-actions-list{display:grid;gap:8px}.bp-actions-list>div{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;padding:11px;background:#fff8ee;border-radius:11px}.bp-actions-list>div.ok{background:#eef8f4}.bp-actions-list span,.bp-checks span{width:25px;height:25px;border-radius:50%;background:#d38b28;color:white;display:grid;place-items:center;font-weight:900}.bp-actions-list .ok span,.bp-checks .ok span{background:#2f9475}.bp-notifications{display:grid;gap:7px}.bp-notifications button{text-align:right;border:1px solid #edf2f0;background:#f9fbfa;border-radius:11px;padding:10px;cursor:pointer}.bp-notifications button.unread{background:#edf9f5;border-color:#bfe3d8}.bp-notifications b,.bp-notifications span,.bp-notifications small{display:block}.bp-notifications span{color:#526b66;margin-top:3px}.bp-notifications small{color:#879794;margin-top:4px}.bp-table{overflow:auto}.bp-table table{width:100%;border-collapse:collapse;min-width:680px}.bp-table th,.bp-table td{text-align:right;padding:11px;border-bottom:1px solid #edf2f0;white-space:nowrap}.bp-table th{font-size:12px;color:#70837f}.bp-form{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:end}.bp-form.pay{grid-template-columns:2fr 1fr 1.5fr auto}.bp-form .full{grid-column:1/-1}.bp-checks{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.bp-checks>div{padding:14px;background:#fff7ee;border:1px solid #f2e6d2;border-radius:14px}.bp-checks>div.ok{background:#eef8f4;border-color:#d1e9df}.bp-checks b,.bp-checks small{display:block}.bp-checks b{margin-top:8px}.bp-checks small{color:#748984;margin-top:3px}.bp-cards{display:grid;gap:8px}.bp-cards article{border:1px solid #edf2f0;background:#f9fbfa;border-radius:12px;padding:12px;display:grid;grid-template-columns:1fr auto auto;gap:10px}.bp-cards span{color:#788c88}.bp-cards strong{color:#0d5f57}.bp-empty{padding:24px;text-align:center;color:#7c8d8a}.bp-loading{min-height:220px;display:grid;place-items:center}@media(max-width:1000px){.bp-kpis{grid-template-columns:repeat(2,1fr)}.bp-checks{grid-template-columns:repeat(2,1fr)}.bp-form,.bp-form.pay{grid-template-columns:1fr 1fr}}@media(max-width:760px){.bp{display:block}.bp aside{width:100%;height:auto;position:relative}.bp nav{display:flex;overflow:auto}.bp nav button{min-width:max-content}.bp-user{display:none}.bp main{padding:16px 12px}.bp-grid{grid-template-columns:1fr}.bp-form,.bp-form.pay{grid-template-columns:1fr}.bp-kpis,.bp-checks{grid-template-columns:1fr 1fr}.bp-hero{padding:20px;align-items:flex-start}.bp-progress{min-width:90px}.bp-cards article{grid-template-columns:1fr}}@media(max-width:480px){.bp-kpis,.bp-checks{grid-template-columns:1fr}.bp header{align-items:flex-start}.bp header button{padding:8px}.bp-hero{display:block}.bp-progress{margin-top:15px;width:90px}}
+ `}</style>}
