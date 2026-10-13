@@ -35,6 +35,14 @@ export default function SidebarRequestsLink(){
      report.onclick=()=>{window.location.href='/admin/report';};
      nav.appendChild(report);
     }
+    if(!document.getElementById('wusool-activity-nav')){
+     const activity=document.createElement('button');
+     activity.id='wusool-activity-nav';
+     activity.type='button';
+     activity.innerHTML='<span class="nav-dot"></span><span>سجل النشاط</span>';
+     activity.onclick=()=>{window.location.href='/admin/activity';};
+     nav.appendChild(activity);
+    }
    };
 
    const refreshCount=async()=>{
@@ -53,7 +61,7 @@ export default function SidebarRequestsLink(){
   }
 
   void install();
-  return()=>{mounted=false;observer?.disconnect();if(channel)db?.removeChannel(channel);document.getElementById('wusool-requests-nav')?.remove();document.getElementById('wusool-report-nav')?.remove();};
+  return()=>{mounted=false;observer?.disconnect();if(channel)db?.removeChannel(channel);document.getElementById('wusool-requests-nav')?.remove();document.getElementById('wusool-report-nav')?.remove();document.getElementById('wusool-activity-nav')?.remove();};
  },[]);
  return null;
 }
