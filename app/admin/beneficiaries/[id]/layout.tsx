@@ -1,7 +1,8 @@
 import type {ReactNode} from 'react';
 import InstallmentManager from './installment-manager';
 import SubmittedDocuments from './submitted-documents';
+import BeneficiaryInsights from './beneficiary-insights';
 
 export default function Beneficiary360Layout({children}:{children:ReactNode}){
- return <>{children}<InstallmentManager/><SubmittedDocuments/></>;
+ return <>{children}<BeneficiaryInsights/><InstallmentManager/><SubmittedDocuments/></>;
 }
