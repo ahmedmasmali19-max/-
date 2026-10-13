@@ -8,6 +8,16 @@ import {beneficiaryFields,configs,titles} from './portal-config';
 import type {Row,Section} from './portal-config';
 import {Audit,Beneficiaries,Dashboard,Generic,Modal,ProfileModal} from './portal-components';
 
+const navGroups:{label:string;items:{id:Section;icon:string}[]}[]=[
+ {label:'الرئيسية',items:[{id:'dashboard',icon:'⌂'}]},
+ {label:'التشغيل',items:[{id:'beneficiaries',icon:'◎'},{id:'vehicles',icon:'▣'},{id:'contracts',icon:'▤'},{id:'handovers',icon:'⇄'}]},
+ {label:'المالية',items:[{id:'installments',icon:'◉'},{id:'ownership',icon:'◇'}]},
+ {label:'الخدمات والطلبات',items:[{id:'maintenance',icon:'⚙'},{id:'accidents',icon:'!'},{id:'documents',icon:'▧'},{id:'approvals',icon:'✓'}]},
+ {label:'المتابعة والرقابة',items:[{id:'followups',icon:'●'},{id:'audit',icon:'≡'}]}
+];
+
+const roleLabel=(role:string)=>role==='admin'?'مدير النظام':role==='project_manager'?'مدير المشروع':role==='management'?'الإدارة - قراءة فقط':role;
+
 export default function Portal(){
  const [session,setSession]=useState<Session|null>(null);
  const [ready,setReady]=useState(false);
@@ -34,54 +44,30 @@ export default function Portal(){
  useEffect(()=>{
   if(!db){setReady(true);return;}
   let mounted=true;
-  db.auth.getSession().then(({data})=>{
-   if(!mounted)return;
-   setSession(data.session);
-   setReady(true);
-  }).catch(()=>{if(mounted)setReady(true)});
-  const {data:s}=db.auth.onAuthStateChange((_e,x)=>{
-   window.setTimeout(()=>{if(mounted)setSession(x)},0);
-  });
+  db.auth.getSession().then(({data})=>{if(!mounted)return;setSession(data.session);setReady(true);}).catch(()=>{if(mounted)setReady(true)});
+  const {data:s}=db.auth.onAuthStateChange((_e,x)=>{window.setTimeout(()=>{if(mounted)setSession(x)},0);});
   return()=>{mounted=false;s.subscription.unsubscribe();};
  },[]);
- useEffect(()=>{
-  if(!session){setRole('none');return;}
-  setRole('checking');
-  const timer=window.setTimeout(()=>{void resolveRole(session);},0);
-  return()=>window.clearTimeout(timer);
- },[session]);
+ useEffect(()=>{if(!session){setRole('none');return;}setRole('checking');const timer=window.setTimeout(()=>{void resolveRole(session);},0);return()=>window.clearTimeout(timer);},[session]);
  useEffect(()=>{if(allowed)void loadAll();},[allowed]);
 
  async function resolveRole(currentSession:Session){
   if(!db){setRole('error');return;}
   let timeoutId:number|undefined;
   try{
-   const timeout=new Promise<never>((_,reject)=>{
-    timeoutId=window.setTimeout(()=>reject(new Error('role_timeout')),10000);
-   });
+   const timeout=new Promise<never>((_,reject)=>{timeoutId=window.setTimeout(()=>reject(new Error('role_timeout')),10000);});
    const result=await Promise.race([db.rpc('portal_role'),timeout]);
    if(timeoutId)window.clearTimeout(timeoutId);
    const {data,error}=result as {data:unknown,error:unknown};
-   if(error){
-    setMessage('تعذر التحقق من صلاحية الحساب. أعد المحاولة.');
-    setRole('error');
-    return;
-   }
+   if(error){setMessage('تعذر التحقق من صلاحية الحساب. أعد المحاولة.');setRole('error');return;}
    const normalized=String(data??'none').trim().toLowerCase();
    setRole(normalized&&normalized!=='none'?normalized:'none');
   }catch{
    if(timeoutId)window.clearTimeout(timeoutId);
-   setMessage('استغرق التحقق من الصلاحية وقتًا أطول من المتوقع. أعد المحاولة.');
-   setRole('error');
+   setMessage('استغرق التحقق من الصلاحية وقتًا أطول من المتوقع. أعد المحاولة.');setRole('error');
   }
  }
-
- function retryRole(){
-  if(!session){setRole('none');return;}
-  setMessage('');
-  setRole('checking');
-  window.setTimeout(()=>{void resolveRole(session);},0);
- }
+ function retryRole(){if(!session){setRole('none');return;}setMessage('');setRole('checking');window.setTimeout(()=>{void resolveRole(session);},0);}
 
  async function loadAll(){
   if(!db)return;setLoading(true);setMessage('');
@@ -102,14 +88,16 @@ export default function Portal(){
  }
 
  const active=(name:string)=>(data[name]??[]).filter(r=>!r.archived);
- const totals=useMemo(()=>({count:reports.length,income:reports.reduce((a,r)=>a+(Number(r.quarterly_income)||0),0),returns:reports.reduce((a,r)=>a+(Number(r.total_return)||0),0),net:reports.reduce((a,r)=>a+(Number(r.net_after_return)||0),0),overdue:active('installments').filter(r=>r.status==='متأخر').length,openTasks:active('followups').filter(r=>r.status!=='مكتمل').length,urgent:active('followups').filter(r=>['عاجلة','عالية'].includes(r.priority)&&r.status!=='مكتمل').length,activeAccidents:active('accidents').filter(r=>r.repair_status!=='مكتمل').length,pendingApprovals:active('approvals').filter(r=>r.status==='قيد المراجعة').length,expiringDocs:active('documents').filter(r=>r.expiry_date&&new Date(r.expiry_date).getTime()>=Date.now()&&new Date(r.expiry_date).getTime()-Date.now()<30*86400000).length}),[reports,data]);
+ const totals=useMemo(()=>({count:reports.length,income:reports.reduce((a,r)=>a+(Number(r.quarterly_income)||0),0),returns:reports.reduce((a,r)=>a+(Number(r.total_return)||0),0),net:reports.reduce((a,r)=>a+(Number(r.net_after_return)||0),0),overdue:active('installments').filter(r=>r.status==='متأخر').length,openTasks:active('followups').filter(r=>r.status!=='مكتمل').length,urgent:active('followups').filter(r=>['عاجلة','عالية'].includes(r.priority)&&r.status!=='مكتمل').length,activeAccidents:active('accidents').filter(r=>!['مكتمل','مغلق'].includes(String(r.repair_status||r.status||''))).length,pendingApprovals:active('approvals').filter(r=>r.status==='قيد المراجعة').length,expiringDocs:active('documents').filter(r=>r.expiry_date&&new Date(r.expiry_date).getTime()>=Date.now()&&new Date(r.expiry_date).getTime()-Date.now()<30*86400000).length}),[reports,data]);
  const vehicleGroups=useMemo(()=>Object.entries(reports.reduce((acc:Record<string,number>,r)=>{const k=r.vehicle_type||'غير محدد';acc[k]=(acc[k]||0)+1;return acc;},{})),[reports]);
- const critical=useMemo(()=>[...active('installments').filter(r=>r.status==='متأخر').map(r=>({type:'قسط متأخر',title:r.contract_reference||'قسط',date:r.due_date,level:'danger'})),...active('followups').filter(r=>r.status==='متأخر'||r.priority==='عاجلة').map(r=>({type:'مهمة عاجلة',title:r.subject,date:r.due_date,level:'warn'})),...active('documents').filter(r=>r.expiry_date&&new Date(r.expiry_date).getTime()>=Date.now()&&new Date(r.expiry_date).getTime()-Date.now()<30*86400000).map(r=>({type:'مستند قريب الانتهاء',title:r.title,date:r.expiry_date,level:'warn'})),...active('accidents').filter(r=>r.repair_status!=='مكتمل').map(r=>({type:'حادث مفتوح',title:r.beneficiary_name||r.vehicle_plate||'حادث',date:r.accident_date,level:'danger'})),...active('approvals').filter(r=>r.status==='قيد المراجعة').map(r=>({type:'موافقة معلقة',title:r.subject,date:r.requested_at,level:'info'}))],[data]);
+ const critical=useMemo(()=>[...active('installments').filter(r=>r.status==='متأخر').map(r=>({type:'قسط متأخر',title:r.contract_reference||'قسط',date:r.due_date,level:'danger'})),...active('followups').filter(r=>r.status==='متأخر'||r.priority==='عاجلة').map(r=>({type:'مهمة عاجلة',title:r.subject,date:r.due_date,level:'warn'})),...active('documents').filter(r=>r.expiry_date&&new Date(r.expiry_date).getTime()>=Date.now()&&new Date(r.expiry_date).getTime()-Date.now()<30*86400000).map(r=>({type:'مستند قريب الانتهاء',title:r.title,date:r.expiry_date,level:'warn'})),...active('accidents').filter(r=>!['مكتمل','مغلق'].includes(String(r.repair_status||r.status||''))).map(r=>({type:'حادث مفتوح',title:r.beneficiary_name||r.vehicle_plate||'حادث',date:r.accident_date,level:'danger'})),...active('approvals').filter(r=>r.status==='قيد المراجعة').map(r=>({type:'موافقة معلقة',title:r.subject,date:r.requested_at,level:'info'}))],[data]);
  const currentRows=section==='beneficiaries'?reports:(data[section]??[]).filter(r=>section==='audit'||!r.archived);
  const filteredRows=useMemo(()=>{const q=search.trim().toLowerCase();let rows=currentRows;if(criticalOnly&&section==='followups')rows=rows.filter(r=>r.status==='متأخر'||['عاجلة','عالية'].includes(r.priority));if(!q)return rows;return rows.filter(r=>Object.values(r).some(v=>String(v??'').toLowerCase().includes(q)));},[currentRows,search,criticalOnly,section]);
 
  async function signIn(e:FormEvent){e.preventDefault();if(!db)return;setMessage('');setRole('checking');const {error}=await db.auth.signInWithPassword({email:(email||adminEmail||'').trim(),password});setPassword('');if(error){setRole('none');setMessage('تعذر تسجيل الدخول. تحقق من البريد وكلمة المرور.');}}
- function add(){setEditing(null);setForm(section==='beneficiaries'?{data_classification:'بيانات تقرير'}:section==='approvals'?{status:'قيد المراجعة'}:section==='followups'?{priority:'متوسطة',status:'مفتوح'}:section==='contracts'?{due_day:27,status:'نشط'}:{});setShowForm(true);}
+ function initialForm(s:Section):Row{return s==='beneficiaries'?{data_classification:'بيانات تقرير'}:s==='approvals'?{status:'قيد المراجعة'}:s==='followups'?{priority:'متوسطة',status:'مفتوح'}:s==='contracts'?{due_day:27,status:'نشط'}:{};}
+ function navigateTo(s:Section,create=false){setSection(s);setShowForm(false);setEditing(null);setForm({});setSearch('');setCriticalOnly(false);if(create){setForm(initialForm(s));setShowForm(true);}}
+ function add(){setEditing(null);setForm(initialForm(section));setShowForm(true);}
  function edit(r:Row){setEditing(r);setForm({...r});setShowForm(true);}
  function cancel(){setShowForm(false);setEditing(null);setForm({});}
  async function save(e:FormEvent){e.preventDefault();if(!db)return;const table=section==='beneficiaries'?'beneficiary_report_details':configs[section]?.table;if(!table)return;const payload={...form};const documentFile=payload.document_file as File|null|undefined;delete payload.document_file;['id','created_at','changed_at','requested_at'].forEach(k=>delete payload[k]);Object.keys(payload).forEach(k=>{if(payload[k]==='')payload[k]=null});if(section==='documents'&&documentFile instanceof File){const safeName=documentFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');const path=`${new Date().toISOString().slice(0,10)}/${crypto.randomUUID()}-${safeName}`;const {error:uploadError}=await db.storage.from('wusool-documents').upload(path,documentFile,{upsert:false,contentType:documentFile.type||undefined});if(uploadError){setMessage(`تعذر رفع الملف: ${uploadError.message}`);return;}payload.file_url=path;}const result=editing?.id?await db.from(table).update(payload).eq('id',editing.id):await db.from(table).insert(payload);if(result.error){setMessage(`تعذر الحفظ: ${result.error.message}`);return;}cancel();setMessage(section==='documents'&&documentFile?'تم رفع المستند وحفظ بياناته بنجاح.':'تم حفظ البيانات بنجاح.');await loadAll();}
@@ -128,5 +116,19 @@ export default function Portal(){
  if(!session||!allowed)return <div className="login-page"><div className="login-card"><div className="mark">و</div><span className="eyebrow">جمعية الأسر المنتجة بجازان</span><h1>بوابة إدارة وصول</h1><p>دخول المستخدم المخول</p>{session&&role==='none'?<><div className="alert">هذا الحساب غير مخوّل داخل منصة وصول.</div><button className="primary" onClick={()=>db?.auth.signOut()}>تسجيل الخروج</button></>:<form onSubmit={signIn}><label>البريد الإلكتروني<input type="email" required value={email||adminEmail||''} onChange={e=>setEmail(e.target.value)}/></label><label>كلمة المرور<input type="password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary">دخول المنصة</button></form>}{message&&<div className="alert">{message}</div>}</div></div>;
 
  const fields=section==='beneficiaries'?beneficiaryFields:(configs[section]?.fields??[]);
- return <div className="app-shell"><aside className="sidebar"><div className="brand"><div className="mark">و</div><div><b>وصول</b><small>منصة إدارة المشروع</small></div></div><nav>{(Object.keys(titles) as Section[]).map(s=><button key={s} className={section===s?'active':''} onClick={()=>{setSection(s);cancel();setSearch('');}}><span className="nav-dot"/>{titles[s]}</button>)}</nav><div className="side-note"><b>تمكين • التزام • انضباط</b><small>الصلاحية: {role}</small></div><button className="signout" onClick={()=>db?.auth.signOut()}>تسجيل الخروج</button></aside><main className="main"><header className="topbar"><div><span className="eyebrow">جمعية الأسر المنتجة بجازان</span><h1>{titles[section]}</h1></div><div className="top-actions"><button className="ghost" onClick={()=>window.print()}>طباعة</button><div className="admin-pill"><span className="status-dot"/>{role==='admin'?'مدير النظام':role}</div></div></header>{message&&<div className="toast">{message}</div>}{loading?<div className="panel center-panel"><div className="loader"/><p>جارٍ تحميل البيانات…</p></div>:section==='dashboard'?<Dashboard totals={totals} groups={vehicleGroups as [string,number][]} critical={critical} notifications={notifications} scores={scores} role={role} onRefresh={refreshAutomation} onBackup={createBackup}/>:section==='beneficiaries'?<Beneficiaries rows={filteredRows} reports={reports} fields={fields} showForm={showForm} form={form} setForm={setForm} editing={editing} add={add} edit={edit} remove={remove} save={save} cancel={cancel} search={search} setSearch={setSearch} setProfile={setProfile} exportCsv={exportCsv} scores={scores}/>:section==='audit'?<Audit rows={filteredRows} search={search} setSearch={setSearch}/>:<Generic section={section} rows={filteredRows} config={configs[section]!} showForm={showForm} fields={fields} form={form} setForm={setForm} editing={editing} add={add} edit={edit} remove={remove} save={save} cancel={cancel} search={search} setSearch={setSearch} showQr={showQr} openDocument={openDocument} generateSchedule={generateSchedule} criticalOnly={criticalOnly} setCriticalOnly={setCriticalOnly}/>}</main>{profile&&<ProfileModal person={profile} data={data} onClose={()=>setProfile(null)}/>} {qr&&<Modal title={qr.title} onClose={()=>setQr(null)}><img className="qr-image" src={qr.src} alt="QR"/><p className="muted center-text">يعرض بيانات تعريف المركبة فقط دون معلومات حساسة.</p></Modal>}</div>;
+ return <div className="app-shell">
+  <aside className="sidebar manager-sidebar">
+   <div className="brand"><div className="mark">و</div><div><b>وصول</b><small>منصة إدارة المشروع</small></div></div>
+   <div className="sidebar-status"><span className="status-dot"/><div><b>{roleLabel(role)}</b><small>متصل الآن</small></div></div>
+   <nav className="grouped-nav">{navGroups.map(group=><div className="nav-group" key={group.label}><span className="nav-group-title">{group.label}</span>{group.items.map(item=><button key={item.id} className={section===item.id?'active':''} onClick={()=>navigateTo(item.id)}><span className="nav-icon">{item.icon}</span><span>{titles[item.id]}</span>{item.id==='followups'&&totals.urgent>0?<em>{totals.urgent}</em>:item.id==='approvals'&&totals.pendingApprovals>0?<em>{totals.pendingApprovals}</em>:null}</button>)}</div>)}</nav>
+   <div className="side-note"><b>تمكين • التزام • انضباط</b><small>إدارة تشغيلية موحدة لمشروع وصول</small></div>
+   <button className="signout" onClick={()=>db?.auth.signOut()}>تسجيل الخروج</button>
+  </aside>
+  <main className="main manager-main">
+   <header className="topbar manager-topbar"><div><span className="eyebrow">جمعية الأسر المنتجة بجازان • مشروع وصول</span><h1>{titles[section]}</h1><p>{section==='dashboard'?'ملخص تنفيذي للحالة التشغيلية والمالية وما يحتاج إجراءً.':'إدارة '+titles[section]+' ومتابعة السجلات المرتبطة بالمشروع.'}</p></div><div className="top-actions"><button className="ghost" onClick={()=>window.print()}>طباعة</button><button className="refresh-button" onClick={()=>void loadAll()}>تحديث</button><div className="admin-pill"><span className="status-dot"/>{roleLabel(role)}</div></div></header>
+   {message&&<div className="toast">{message}</div>}
+   {loading?<div className="panel center-panel"><div className="loader"/><p>جارٍ تحميل البيانات…</p></div>:section==='dashboard'?<Dashboard totals={totals} groups={vehicleGroups as [string,number][]} critical={critical} notifications={notifications} scores={scores} role={role} onRefresh={refreshAutomation} onBackup={createBackup} onNavigate={navigateTo}/>:section==='beneficiaries'?<Beneficiaries rows={filteredRows} reports={reports} fields={fields} showForm={showForm} form={form} setForm={setForm} editing={editing} add={add} edit={edit} remove={remove} save={save} cancel={cancel} search={search} setSearch={setSearch} setProfile={setProfile} exportCsv={exportCsv} scores={scores}/>:section==='audit'?<Audit rows={filteredRows} search={search} setSearch={setSearch}/>:<Generic section={section} rows={filteredRows} config={configs[section]!} showForm={showForm} fields={fields} form={form} setForm={setForm} editing={editing} add={add} edit={edit} remove={remove} save={save} cancel={cancel} search={search} setSearch={setSearch} showQr={showQr} openDocument={openDocument} generateSchedule={generateSchedule} criticalOnly={criticalOnly} setCriticalOnly={setCriticalOnly}/>} 
+  </main>
+  {profile&&<ProfileModal person={profile} data={data} onClose={()=>setProfile(null)}/>} {qr&&<Modal title={qr.title} onClose={()=>setQr(null)}><img className="qr-image" src={qr.src} alt="QR"/><p className="muted center-text">يعرض بيانات تعريف المركبة فقط دون معلومات حساسة.</p></Modal>}
+ </div>;
 }
