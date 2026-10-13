@@ -14,7 +14,7 @@ export default function SidebarRequestsLink(){
    const {data:{session}}=await db!.auth.getSession();
    if(!session||!mounted)return;
    const {data:role}=await db!.rpc('portal_role');
-   if(!['admin','project_manager'].includes(String(role||'').toLowerCase()))return;
+   if(!['admin','project_manager','management'].includes(String(role||'').toLowerCase()))return;
 
    const ensureLink=()=>{
     const nav=document.querySelector<HTMLElement>('.sidebar nav');
