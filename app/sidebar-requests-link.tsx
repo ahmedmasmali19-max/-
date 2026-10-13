@@ -27,6 +27,14 @@ export default function SidebarRequestsLink(){
      button.onclick=()=>{window.location.href='/admin/requests';};
      nav.appendChild(button);
     }
+    if(!document.getElementById('wusool-payments-nav')){
+     const payments=document.createElement('button');
+     payments.id='wusool-payments-nav';
+     payments.type='button';
+     payments.innerHTML='<span class="nav-dot"></span><span>إثباتات السداد</span>';
+     payments.onclick=()=>{window.location.href='/admin/payments';};
+     nav.appendChild(payments);
+    }
     if(!document.getElementById('wusool-report-nav')){
      const report=document.createElement('button');
      report.id='wusool-report-nav';
@@ -61,7 +69,7 @@ export default function SidebarRequestsLink(){
   }
 
   void install();
-  return()=>{mounted=false;observer?.disconnect();if(channel)db?.removeChannel(channel);document.getElementById('wusool-requests-nav')?.remove();document.getElementById('wusool-report-nav')?.remove();document.getElementById('wusool-activity-nav')?.remove();};
+  return()=>{mounted=false;observer?.disconnect();if(channel)db?.removeChannel(channel);document.getElementById('wusool-requests-nav')?.remove();document.getElementById('wusool-payments-nav')?.remove();document.getElementById('wusool-report-nav')?.remove();document.getElementById('wusool-activity-nav')?.remove();};
  },[]);
  return null;
 }
