@@ -35,6 +35,14 @@ export default function SidebarRequestsLink(){
      payments.onclick=()=>{window.location.href='/admin/payments';};
      nav.appendChild(payments);
     }
+    if(!document.getElementById('wusool-delinquency-nav')){
+     const delinquency=document.createElement('button');
+     delinquency.id='wusool-delinquency-nav';
+     delinquency.type='button';
+     delinquency.innerHTML='<span class="nav-dot"></span><span>لوحة التعثر</span>';
+     delinquency.onclick=()=>{window.location.href='/admin/delinquency';};
+     nav.appendChild(delinquency);
+    }
     if(!document.getElementById('wusool-report-nav')){
      const report=document.createElement('button');
      report.id='wusool-report-nav';
@@ -69,7 +77,7 @@ export default function SidebarRequestsLink(){
   }
 
   void install();
-  return()=>{mounted=false;observer?.disconnect();if(channel)db?.removeChannel(channel);document.getElementById('wusool-requests-nav')?.remove();document.getElementById('wusool-payments-nav')?.remove();document.getElementById('wusool-report-nav')?.remove();document.getElementById('wusool-activity-nav')?.remove();};
+  return()=>{mounted=false;observer?.disconnect();if(channel)db?.removeChannel(channel);document.getElementById('wusool-requests-nav')?.remove();document.getElementById('wusool-payments-nav')?.remove();document.getElementById('wusool-delinquency-nav')?.remove();document.getElementById('wusool-report-nav')?.remove();document.getElementById('wusool-activity-nav')?.remove();};
  },[]);
  return null;
 }
