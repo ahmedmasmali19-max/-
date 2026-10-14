@@ -9,6 +9,7 @@ import DashboardLiveMetrics from './dashboard-live-metrics';
 import OperationsAlertCenter from './operations-alert-center';
 import SmartNotificationsRefresh from './smart-notifications-refresh';
 import ManagerCommandCenter from './manager-command-center';
+import BeneficiaryPortalShare from './beneficiary-portal-share';
 
 export default function Home(){
   return <>
@@ -20,6 +21,7 @@ export default function Home(){
     <Beneficiary360Links/>
     <ManagementReadonlyGuard/>
     <ManagerCommandCenter/>
+    <BeneficiaryPortalShare/>
     <Portal/>
     <ManagerRequestsPanel/>
     <ManagerBeneficiaryAccountsPanel/>
