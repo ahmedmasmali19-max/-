@@ -53,6 +53,16 @@ export default function DashboardLiveMetrics(){
    const panel=bars.closest('.exec-panel');const badge=panel?.querySelector('.count-badge');if(badge)badge.textContent=String(vehicles.length);
   }
 
+  function ensureLiveBadge(){
+   if(document.getElementById('live-source-badge'))return;
+   const actions=document.querySelector<HTMLElement>('.topbar .top-actions');
+   if(!actions)return;
+   const tag=document.createElement('div');tag.id='live-source-badge';tag.className='live-source-badge';
+   const dot=document.createElement('span');dot.className='live-source-dot';
+   const label=document.createElement('span');label.textContent='مؤشرات مباشرة';
+   tag.append(dot,label);actions.prepend(tag);
+  }
+
   function apply(k:any,vehicles:Row[],installments:Row[]){
    if(!active)return;
    const map:{[key:string]:string}={
@@ -66,9 +76,7 @@ export default function DashboardLiveMetrics(){
    Object.entries(map).forEach(([label,value])=>{const box=findKpi(label);text(box?.querySelector('strong')||null,value);});
    const chart=document.querySelector<HTMLElement>('.monthly-chart');if(chart)renderMonthly(chart,installments);
    const bars=document.querySelector<HTMLElement>('.vehicle-bars');if(bars)renderVehicles(bars,vehicles);
-
-   let tag=document.getElementById('live-source-badge');
-   if(!tag){tag=document.createElement('div');tag.id='live-source-badge';tag.textContent='● مؤشرات تشغيلية مباشرة';tag.style.cssText='position:fixed;right:20px;bottom:18px;z-index:65;background:#e9f8f2;color:#0d5f57;border:1px solid #c8e9de;border-radius:999px;padding:8px 12px;font:700 11px Tahoma,Arial;box-shadow:0 8px 22px rgba(13,95,87,.12)';document.body.appendChild(tag);}
+   ensureLiveBadge();
   }
 
   async function refresh(){
