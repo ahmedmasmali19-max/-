@@ -4,6 +4,7 @@ import {useEffect} from 'react';
 import {db} from '../lib/db';
 
 const workLinks=[
+ ['wusool-beneficiary-portal-nav','بوابة المستفيد','#beneficiary-portal','↗'],
  ['wusool-management-nav','لوحة الإدارة','/admin/management','◫'],
  ['wusool-requests-nav','الطلبات الواردة','/admin/requests','⌁'],
  ['wusool-payments-nav','إثباتات السداد','/admin/payments','ر.س'],
@@ -35,7 +36,11 @@ export default function SidebarRequestsLink(){
       if(id==='wusool-requests-nav'){
         const b=document.createElement('b');b.id='wusool-requests-count';b.className='sidebar-count-badge';b.textContent='0';b.style.display='none';x.appendChild(b);
       }
-      x.onclick=()=>{window.location.href=href;};nav.appendChild(x);
+      x.onclick=()=>{
+        if(id==='wusool-beneficiary-portal-nav')document.getElementById('beneficiary-portal-share-trigger')?.click();
+        else window.location.href=href;
+      };
+      nav.appendChild(x);
     }
    };
    const refreshCount=async()=>{const {count}=await db!.from('beneficiary_submissions').select('id',{count:'exact',head:true}).eq('status','قيد المراجعة');const badge=document.getElementById('wusool-requests-count');if(badge){const n=count||0;badge.textContent=String(n);badge.style.display=n>0?'inline-grid':'none';}};
