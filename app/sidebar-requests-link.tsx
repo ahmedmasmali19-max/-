@@ -4,6 +4,7 @@ import {useEffect} from 'react';
 import {db} from '../lib/db';
 
 const workLinks=[
+ ['wusool-management-nav','لوحة الإدارة','/admin/management','◫'],
  ['wusool-requests-nav','الطلبات الواردة','/admin/requests','⌁'],
  ['wusool-payments-nav','إثباتات السداد','/admin/payments','ر.س'],
  ['wusool-delinquency-nav','لوحة التعثر','/admin/delinquency','!'],
