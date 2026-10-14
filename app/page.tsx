@@ -8,6 +8,7 @@ import ManagementReadonlyGuard from './management-readonly-guard';
 import DashboardLiveMetrics from './dashboard-live-metrics';
 import OperationsAlertCenter from './operations-alert-center';
 import SmartNotificationsRefresh from './smart-notifications-refresh';
+import ManagerCommandCenter from './manager-command-center';
 
 export default function Home(){
   return <>
@@ -18,6 +19,7 @@ export default function Home(){
     <SidebarRequestsLink/>
     <Beneficiary360Links/>
     <ManagementReadonlyGuard/>
+    <ManagerCommandCenter/>
     <Portal/>
     <ManagerRequestsPanel/>
     <ManagerBeneficiaryAccountsPanel/>
