@@ -7,6 +7,7 @@ const workLinks=[
  ['wusool-beneficiary-portal-nav','بوابة المستفيد','#beneficiary-portal','↗'],
  ['wusool-management-nav','لوحة الإدارة','/admin/management','◫'],
  ['wusool-tasks-nav','مهامي اليوم','/admin/tasks','✓'],
+ ['wusool-search-nav','البحث الشامل','/admin/search','⌕'],
  ['wusool-smart-nav','الاقتراحات الذكية','/admin/smart-actions','✦'],
  ['wusool-performance-nav','الأداء الشهري','/admin/performance','↗'],
  ['wusool-scores-nav','تقييم الأداء','/admin/performance-scores','★'],
@@ -29,6 +30,8 @@ const workLinks=[
  ['wusool-reports-center-nav','مركز التقارير','/admin/reports-center','R'],
  ['wusool-report-nav','التقرير التنفيذي','/admin/report','▤'],
  ['wusool-ppt-nav','PowerPoint تنفيذي','/admin/powerpoint','P'],
+ ['wusool-permissions-nav','صلاحيات الموظفين','/admin/permissions','🔒'],
+ ['wusool-backups-nav','النسخ الاحتياطي','/admin/backups','⟳'],
  ['wusool-settings-nav','إعدادات المشروع','/admin/settings','⚙'],
  ['wusool-activity-nav','سجل النشاط','/admin/activity','≡']
 ] as const;
