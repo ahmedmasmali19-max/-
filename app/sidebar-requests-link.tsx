@@ -14,6 +14,7 @@ const workLinks=[
  ['wusool-delinquency-nav','لوحة التعثر','/admin/delinquency','!'],
  ['wusool-documents-nav','لوحة المستندات','/admin/documents','▧'],
  ['wusool-followups-nav','مهام المتابعة','/admin/followups','◎'],
+ ['wusool-quality-nav','جودة البيانات','/admin/data-quality','Q'],
  ['wusool-ownership-nav','تجهيز نقل الملكية','/admin/ownership-readiness','◇'],
  ['wusool-weekly-nav','الملخص الأسبوعي','/admin/weekly','7'],
  ['wusool-report-nav','التقرير التنفيذي','/admin/report','▤'],
