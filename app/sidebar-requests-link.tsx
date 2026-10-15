@@ -6,7 +6,9 @@ import {db} from '../lib/db';
 const workLinks=[
  ['wusool-beneficiary-portal-nav','بوابة المستفيد','#beneficiary-portal','↗'],
  ['wusool-management-nav','لوحة الإدارة','/admin/management','◫'],
+ ['wusool-performance-nav','الأداء الشهري','/admin/performance','↗'],
  ['wusool-requests-nav','الطلبات الواردة','/admin/requests','⌁'],
+ ['wusool-broadcast-nav','إشعارات المستفيدين','/admin/broadcast','✦'],
  ['wusool-risk-nav','مخاطر المستفيدين','/admin/risk','⚠'],
  ['wusool-finance-nav','اللوحة المالية','/admin/finance','ر.س'],
  ['wusool-operations-nav','الحوادث والصيانة','/admin/operations','⚙'],
@@ -19,6 +21,7 @@ const workLinks=[
  ['wusool-weekly-nav','الملخص الأسبوعي','/admin/weekly','7'],
  ['wusool-report-nav','التقرير التنفيذي','/admin/report','▤'],
  ['wusool-ppt-nav','PowerPoint تنفيذي','/admin/powerpoint','P'],
+ ['wusool-settings-nav','إعدادات المشروع','/admin/settings','⚙'],
  ['wusool-activity-nav','سجل النشاط','/admin/activity','≡']
 ] as const;
 
