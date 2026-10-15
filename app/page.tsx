@@ -10,6 +10,7 @@ import OperationsAlertCenter from './operations-alert-center';
 import SmartNotificationsRefresh from './smart-notifications-refresh';
 import ManagerCommandCenter from './manager-command-center';
 import BeneficiaryPortalShare from './beneficiary-portal-share';
+import TodayActionsCenter from './today-actions-center';
 
 export default function Home(){
   return <>
@@ -23,6 +24,7 @@ export default function Home(){
     <ManagerCommandCenter/>
     <BeneficiaryPortalShare/>
     <Portal/>
+    <TodayActionsCenter/>
     <ManagerRequestsPanel/>
     <ManagerBeneficiaryAccountsPanel/>
   </>;
