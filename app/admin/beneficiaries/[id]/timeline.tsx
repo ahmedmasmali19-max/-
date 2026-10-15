@@ -1,45 +1,18 @@
 'use client';
 
-import {useEffect,useMemo,useState} from 'react';
+import {useEffect,useState} from 'react';
 import {useParams} from 'next/navigation';
 import {db} from '../../../../lib/db';
 
 type Row=Record<string,any>;
-type EventRow={date:string;title:string;meta:string;kind:string};
-const fmt=(v:any)=>v?new Date(v).toLocaleString('ar-SA'):'—';
+const labels:Record<string,string>={contract:'العقد',installment:'السداد',document:'المستندات',accident:'الحوادث',maintenance:'الصيانة',request:'الطلبات',followup:'المتابعات'};
 
 export default function BeneficiaryTimeline(){
  const params=useParams<{id:string}>();const id=String(params?.id||'');
- const [role,setRole]=useState('checking');const [events,setEvents]=useState<EventRow[]>([]);const [loading,setLoading]=useState(true);
+ const [rows,setRows]=useState<Row[]>([]);const [loading,setLoading]=useState(true);const [allowed,setAllowed]=useState(false);const [message,setMessage]=useState('');
  useEffect(()=>{void boot()},[id]);
- async function boot(){if(!db||!id)return;const {data:{session}}=await db.auth.getSession();if(!session)return;const {data:r}=await db.rpc('portal_role');const rr=String(r||'').toLowerCase();setRole(rr);if(!['admin','project_manager','management','finance'].includes(rr)){setLoading(false);return;}
-  const [c,s,d,a,m,h,o,f]=await Promise.all([
-   db.from('contracts').select('*').eq('beneficiary_id',id).order('created_at',{ascending:false}),
-   db.from('beneficiary_submissions').select('*').eq('beneficiary_id',id).order('created_at',{ascending:false}),
-   db.from('documents').select('*').eq('beneficiary_id',id).order('created_at',{ascending:false}),
-   db.from('accidents').select('*').eq('beneficiary_id',id).order('created_at',{ascending:false}),
-   db.from('maintenance').select('*').order('created_at',{ascending:false}),
-   db.from('vehicle_handovers').select('*').eq('beneficiary_id',id).order('created_at',{ascending:false}),
-   db.from('ownership_transfers').select('*').eq('beneficiary_id',id).order('created_at',{ascending:false}),
-   db.from('followups').select('*').eq('beneficiary_id',id).order('created_at',{ascending:false})
-  ]);
-  const vehicleIds=(await db.from('vehicles').select('id').eq('beneficiary_id',id)).data?.map(x=>x.id)??[];
-  const maintRows=(m.data??[]).filter((x:any)=>vehicleIds.includes(x.vehicle_id));
-  const contractIds=(c.data??[]).map((x:any)=>x.id);
-  const ins=contractIds.length?await db.from('installments').select('*').in('contract_id',contractIds).order('due_date',{ascending:false}):{data:[] as Row[]};
-  const out:EventRow[]=[];
-  (c.data??[]).forEach((x:any)=>out.push({date:x.created_at,title:'إنشاء/تحديث عقد',meta:`${x.reference||'—'} • ${x.status||'—'}`,kind:'contract'}));
-  (ins.data??[]).forEach((x:any)=>out.push({date:x.due_date||x.created_at,title:'قسط',meta:`#${x.installment_no??'—'} • ${x.status||'—'} • ${Number(x.paid_amount||0).toLocaleString('ar-SA')} ر.س مسدد`,kind:'installment'}));
-  (s.data??[]).forEach((x:any)=>out.push({date:x.reviewed_at||x.created_at,title:'طلب مستفيد',meta:`${x.title||x.submission_type||'طلب'} • ${x.status||'—'}`,kind:'request'}));
-  (d.data??[]).forEach((x:any)=>out.push({date:x.created_at,title:'مستند',meta:`${x.title||x.document_type||'مستند'}${x.expiry_date?` • ينتهي ${x.expiry_date}`:''}`,kind:'document'}));
-  (a.data??[]).forEach((x:any)=>out.push({date:x.accident_date||x.created_at,title:'حادث',meta:`${x.claim_number||'بدون رقم مطالبة'} • ${x.repair_status||'—'}`,kind:'accident'}));
-  maintRows.forEach((x:any)=>out.push({date:x.due_date||x.created_at,title:'صيانة',meta:`${x.category||'صيانة'} • ${x.status||'—'}`,kind:'maintenance'}));
-  (h.data??[]).forEach((x:any)=>out.push({date:x.handover_date||x.created_at,title:'تسليم/استلام',meta:`${x.handover_type||'إجراء'} • العداد ${x.odometer??'—'}`,kind:'handover'}));
-  (o.data??[]).forEach((x:any)=>out.push({date:x.transfer_date||x.request_date||x.created_at,title:'نقل ملكية',meta:x.status||'طلب نقل ملكية',kind:'ownership'}));
-  (f.data??[]).forEach((x:any)=>out.push({date:x.due_date||x.created_at,title:'متابعة',meta:`${x.subject||'متابعة'} • ${x.status||'—'}`,kind:'followup'}));
-  out.sort((x,y)=>new Date(y.date||0).getTime()-new Date(x.date||0).getTime());setEvents(out.slice(0,80));setLoading(false);
- }
- const grouped=useMemo(()=>events,[events]);
- if(loading||!['admin','project_manager','management','finance'].includes(role))return null;
- return <section className="tl-wrap" dir="rtl"><div className="tl-card"><div className="tl-head"><span>360°</span><h2>السجل الزمني للمستفيد</h2></div>{grouped.length===0?<p className="tl-empty">لا توجد أحداث حتى الآن.</p>:<div className="tl-list">{grouped.map((e,i)=><article key={`${e.kind}-${i}`}><div className={`tl-dot ${e.kind}`}/><div><b>{e.title}</b><p>{e.meta}</p><small>{fmt(e.date)}</small></div></article>)}</div>}</div><style jsx global>{`.tl-wrap{max-width:1440px;margin:0 auto 24px;padding:0 28px;font-family:Tahoma,Arial,sans-serif;color:#183d39}.tl-card{background:#fff;border:1px solid #e1ebe8;border-radius:20px;padding:18px}.tl-head span{color:#3d927c;font-size:12px;font-weight:800}.tl-head h2{margin:4px 0 16px}.tl-list{position:relative;display:grid;gap:0}.tl-list:before{content:'';position:absolute;right:8px;top:8px;bottom:8px;width:2px;background:#e4ecea}.tl-list article{position:relative;display:grid;grid-template-columns:24px 1fr;gap:12px;padding:0 0 16px}.tl-dot{width:14px;height:14px;border-radius:50%;background:#0d5f57;border:3px solid #e8f4f1;z-index:1}.tl-list b{display:block}.tl-list p{margin:4px 0;color:#566b67}.tl-list small{color:#8a9996}.tl-empty{text-align:center;color:#81908e;padding:16px}@media(max-width:650px){.tl-wrap{padding:0 12px}}@media print{.tl-wrap{display:none}}`}</style></section>
+ async function boot(){if(!db||!id)return;const {data:{session}}=await db.auth.getSession();if(!session)return;const {data:r}=await db.rpc('portal_role');if(!['admin','project_manager','management'].includes(String(r||'').toLowerCase())){setLoading(false);return;}setAllowed(true);await load();}
+ async function load(){if(!db||!id)return;setLoading(true);const {data,error}=await db.rpc('get_beneficiary_timeline',{p_beneficiary_id:id});if(error)setMessage('تعذر تحميل السجل الزمني.');setRows((data as Row[])||[]);setLoading(false);}
+ if(!allowed)return null;
+ return <section className="tl-wrap" dir="rtl"><div className="tl-card"><div className="tl-head"><div><span>360° • سجل موحد</span><h2>الخط الزمني للمستفيد</h2><p>العقد والسداد والمستندات والحوادث والصيانة والطلبات والمتابعات في تسلسل واحد.</p></div><button onClick={()=>void load()}>تحديث</button></div>{message&&<div className="tl-note">{message}</div>}{loading?<p className="tl-empty">جارٍ تحميل السجل…</p>:rows.length===0?<p className="tl-empty">لا توجد أحداث حتى الآن.</p>:<div className="tl-list">{rows.map((e,i)=><article key={`${e.kind}-${e.source_id}-${i}`}><div className={`tl-dot ${e.kind}`}/><div><div className="tl-row-head"><b>{e.title||labels[e.kind]||'إجراء'}</b><span>{labels[e.kind]||e.category||'سجل'}</span></div><p>{e.details||'—'}</p><small>{e.occurred_at?new Date(e.occurred_at).toLocaleString('ar-SA'):'—'}</small></div></article>)}</div>}</div><style jsx global>{`.tl-wrap{max-width:1440px;margin:0 auto 24px;padding:0 28px;font-family:Tahoma,Arial,sans-serif;color:#183d39}.tl-card{background:#fff;border:1px solid #e1ebe8;border-radius:20px;padding:18px}.tl-head{display:flex;justify-content:space-between;gap:14px;align-items:center}.tl-head span{color:#3d927c;font-size:12px;font-weight:800}.tl-head h2{margin:4px 0 6px}.tl-head p{margin:0;color:#768985;font-size:12px}.tl-head button{border:1px solid #d8e7e3;background:#f7fbfa;color:#0d5f57;border-radius:10px;padding:8px 12px;font-weight:800;cursor:pointer}.tl-list{position:relative;display:grid;gap:0;margin-top:16px}.tl-list:before{content:'';position:absolute;right:8px;top:8px;bottom:8px;width:2px;background:#e4ecea}.tl-list article{position:relative;display:grid;grid-template-columns:24px 1fr;gap:12px;padding:0 0 16px}.tl-dot{width:14px;height:14px;border-radius:50%;background:#0d5f57;border:3px solid #e8f4f1;z-index:1}.tl-dot.accident{background:#b34740}.tl-dot.document{background:#9a6a17}.tl-dot.maintenance{background:#557f9a}.tl-dot.request{background:#7d5a91}.tl-dot.followup{background:#b07718}.tl-row-head{display:flex;justify-content:space-between;gap:12px}.tl-row-head span{font-size:10px;background:#eef7f4;color:#0d5f57;padding:4px 8px;border-radius:999px;font-weight:800}.tl-list b{display:block}.tl-list p{margin:4px 0;color:#566b67}.tl-list small{color:#8a9996}.tl-empty,.tl-note{text-align:center;color:#81908e;padding:16px}@media(max-width:650px){.tl-wrap{padding:0 12px}.tl-head,.tl-row-head{align-items:flex-start;flex-direction:column}}@media print{.tl-wrap{display:none}}`}</style></section>;
 }
