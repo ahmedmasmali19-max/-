@@ -1,11 +1,13 @@
 {
-  "name":"بوابة وصول",
+  "name":"وصول - بوابة المشروع",
   "short_name":"وصول",
-  "description":"منصة إدارة مشروع وصول - جمعية الأسر المنتجة بجازان",
-  "start_url":"/",
+  "description":"بوابة مشروع وصول لإدارة المستفيدين والمركبات والأقساط والخدمات.",
+  "start_url":"/beneficiary",
+  "scope":"/",
   "display":"standalone",
   "background_color":"#f4f8f7",
   "theme_color":"#0f7d6d",
   "lang":"ar",
-  "dir":"rtl"
+  "dir":"rtl",
+  "icons":[{"src":"/wusool-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
 }
