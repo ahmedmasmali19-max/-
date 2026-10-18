@@ -1,0 +1,69 @@
+/* Wusool responsive usability layer: shared between beneficiary and manager portals. */
+:root{--wusool-touch:44px}
+html,body{max-width:100%;overflow-x:clip}
+button,a,input,select,textarea{min-width:0}
+button,a{touch-action:manipulation}
+:where(button,a,input,select,textarea):focus-visible{outline:3px solid #45ae91;outline-offset:2px}
+:where(.bp,.svc,.files,.rc,.app-shell,.main,.dashboard-grid,.dashboard,.panel,.card,.bp-panel){min-width:0}
+:where(.bp,.svc,.files,.rc) img{max-width:100%;height:auto}
+:where(.bp,.svc,.files,.rc) :is(h1,h2,h3,p,span,strong,b){overflow-wrap:anywhere}
+:where(.bp,.svc,.files,.rc) :is(input,select,textarea){max-width:100%;box-sizing:border-box}
+.bp main{min-width:0}.bp-panel,.bp-grid>*{min-width:0}
+.bp-table,.table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.bp-table table,.table-wrap table{max-width:none}
+.bp-hero,.bp-head,.bp header{gap:12px}
+.bp-hero>div,.bp-head>div{min-width:0}
+.bp nav button{min-height:var(--wusool-touch)}
+/* Keep shared floating share action clear of the compact services button. */
+.beneficiary-share-fab{left:145px;bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+.wusool-quick-menu{left:12px!important}
+.wusool-quick-panel{scrollbar-gutter:stable}
+.sidebar{overflow-y:auto;overscroll-behavior:contain}
+.sidebar nav{min-width:0}
+.sidebar .sidebar-work-link{white-space:normal;text-align:right;min-height:40px}
+.app-shell .main,.main{min-width:0}
+.main .panel{min-width:0}
+@media(max-width:900px){
+ .sidebar{height:auto;max-height:40vh;position:relative;overflow-y:auto;width:100%}
+ .sidebar nav{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;gap:6px;scrollbar-width:thin;overscroll-behavior-x:contain;padding-bottom:8px}
+ .sidebar nav button{white-space:nowrap;min-height:var(--wusool-touch)}
+ .sidebar .sidebar-section-title{display:none}
+ .app-shell{display:block}
+ .main{width:100%;padding-inline:14px}
+ .bp aside{width:100%;max-width:100%;height:auto;position:static;overflow:visible}
+ .bp aside nav{display:flex;overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:8px;scrollbar-width:thin}
+ .bp aside nav button{flex:none;white-space:nowrap;min-height:var(--wusool-touch)}
+ .bp main{width:100%;padding:16px 14px 76px}
+ .bp-grid,.dashboard-grid,.profile-sections{grid-template-columns:minmax(0,1fr)}
+ .bp-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .bp-checks{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .form-grid,.bp-form,.bp-form.pay{grid-template-columns:minmax(0,1fr)}
+ .bp header{flex-wrap:wrap}
+ .bp header button{min-height:var(--wusool-touch)}
+ .beneficiary-share-fab{left:140px;bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+}
+@media(max-width:580px){
+ .main{padding:14px 10px}
+ .sidebar{padding:10px;max-height:37vh}
+ .bp main{padding:14px 10px 74px}
+ .bp-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .bp-kpi{padding:12px}
+ .bp-kpi strong{font-size:clamp(15px,4.2vw,20px)}
+ .bp-hero{display:flex;flex-direction:column;align-items:stretch;padding:18px}
+ .bp-progress{min-width:0;width:100%;aspect-ratio:auto;min-height:80px}
+ .bp-grid,.bp-checks{grid-template-columns:minmax(0,1fr)}
+ .bp-cards article{grid-template-columns:minmax(0,1fr)}
+ .bp header h1{font-size:clamp(19px,6vw,26px)}
+ .bp-panel{padding:14px}
+ .bp-actions-list>div{grid-template-columns:auto minmax(0,1fr);align-items:start}
+ .bp-actions-list strong{grid-column:2}
+ .beneficiary-share-fab{left:140px;bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+ .svc,.files,.rc{padding:12px}
+ .svc .grid,.files .grid,.svc .grid.four,.svc .grid.two,.files .two{grid-template-columns:minmax(0,1fr)}
+ .svc header,.files header,.rc header{flex-wrap:wrap}
+ .svc .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .svc .hero{padding:18px}
+ .wusool-quick-menu{left:10px!important}
+}
+@media(max-width:370px){.bp-kpis{grid-template-columns:1fr}.beneficiary-share-fab{left:128px}}
+@media print{.wusool-quick-menu,.beneficiary-share-fab{display:none!important}.sidebar{display:none!important}}
