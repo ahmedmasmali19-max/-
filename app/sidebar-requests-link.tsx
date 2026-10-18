@@ -26,6 +26,7 @@ const workLinks=[
  ['wusool-documents-nav','لوحة المستندات','/admin/documents','▧'],
  ['wusool-followups-nav','مهام المتابعة','/admin/followups','◎'],
  ['wusool-quality-nav','جودة البيانات','/admin/data-quality','Q'],
+ ['wusool-health-nav','فحص سلامة البيانات','/admin/data-health','✓'],
  ['wusool-ownership-nav','تجهيز نقل الملكية','/admin/ownership-readiness','◇'],
  ['wusool-weekly-nav','الملخص الأسبوعي','/admin/weekly','7'],
  ['wusool-reports-center-nav','مركز التقارير','/admin/reports-center','R'],
