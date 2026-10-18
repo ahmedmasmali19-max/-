@@ -16,6 +16,7 @@ const workLinks=[
  ['wusool-bulk-nav','الإجراءات الجماعية','/admin/bulk','◎'],
  ['wusool-broadcast-nav','إشعارات المستفيدين','/admin/broadcast','✦'],
  ['wusool-comms-nav','مراسلات المستفيدين','/admin/communications','✉'],
+ ['wusool-chats-nav','محادثات المستفيدين','/admin/conversations','✉'],
  ['wusool-risk-nav','مخاطر المستفيدين','/admin/risk','⚠'],
  ['wusool-finance-nav','اللوحة المالية','/admin/finance','ر.س'],
  ['wusool-costs-nav','تكاليف المركبات','/admin/vehicle-costs','▥'],
