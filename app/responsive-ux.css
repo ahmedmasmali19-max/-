@@ -67,3 +67,15 @@ button,a{touch-action:manipulation}
 }
 @media(max-width:370px){.bp-kpis{grid-template-columns:1fr}.beneficiary-share-fab{left:128px}}
 @media print{.wusool-quick-menu,.beneficiary-share-fab{display:none!important}.sidebar{display:none!important}}
+
+
+/* Manager dashboard layout: action launchers no longer cover cards */
+.manager-requests-button,.beneficiary-accounts-button{position:relative!important;inset:auto!important;left:auto!important;bottom:auto!important;z-index:1!important;display:inline-flex!important;vertical-align:middle;margin:10px 6px 12px!important;box-shadow:0 4px 15px rgba(13,95,87,.12)!important}
+.manager-requests-button{margin-inline-start:28px!important}
+.manager-command-bar{box-sizing:border-box!important;max-width:100%!important;min-width:0!important}
+.manager-global-search{min-width:0!important;flex:1 1 300px!important}
+.manager-global-search input{min-width:0!important;max-width:100%!important}
+.manager-notify-button{flex:0 0 auto!important}
+.main .hero.wusool-personal-home{max-width:100%;min-width:0}
+@media(max-width:900px){.manager-command-bar{width:100%!important;flex-wrap:wrap!important;gap:8px!important}.manager-global-search{flex:1 1 220px!important}.manager-requests-button{margin-inline-start:12px!important}}
+@media(max-width:600px){.manager-command-bar{padding:10px!important}.manager-global-search{flex-basis:100%!important;order:2!important}.manager-notify-button{order:1!important}.manager-requests-button,.beneficiary-accounts-button{width:calc(50% - 18px)!important;justify-content:center!important;font-size:12px!important;margin:6px!important;padding:10px!important}.manager-requests-button{margin-inline-start:10px!important}}
