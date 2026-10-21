@@ -11,10 +11,12 @@ import SmartNotificationsRefresh from './smart-notifications-refresh';
 import ManagerCommandCenter from './manager-command-center';
 import BeneficiaryPortalShare from './beneficiary-portal-share';
 import TodayActionsCenter from './today-actions-center';
+import ManagerThemeSelector from './manager-theme-selector';
 
 export default function Home(){
   return <>
     <DashboardPersonalizer/>
+    <ManagerThemeSelector/>
     <DashboardLiveMetrics/>
     <OperationsAlertCenter/>
     <SmartNotificationsRefresh/>
