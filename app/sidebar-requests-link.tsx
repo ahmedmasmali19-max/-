@@ -56,6 +56,25 @@ export default function SidebarRequestsLink(){
       if(id==='wusool-requests-nav'){const b=document.createElement('b');b.id='wusool-requests-count';b.className='sidebar-count-badge';b.textContent='0';b.style.display='none';x.appendChild(b);}
       x.onclick=()=>{if(id==='wusool-beneficiary-portal-nav')document.getElementById('beneficiary-portal-share-trigger')?.click();else window.location.href=href;};nav.appendChild(x);
     }
+    // Organize existing and extended navigation into accessible collapsible sections.
+    if(!nav.querySelector('.wusool-nav-groups')){
+      const original=Array.from(nav.querySelectorAll(':scope > button')) as HTMLButtonElement[];
+      const sections=[
+        {title:'الأساسية',ids:['wusool-management-nav','wusool-tasks-nav','wusool-search-nav'],initial:3},
+        {title:'التشغيل والمستفيدون',ids:['wusool-requests-nav','wusool-comms-nav','wusool-chats-nav','wusool-payments-nav','wusool-operations-nav','wusool-documents-nav','wusool-followups-nav','wusool-bulk-nav','wusool-broadcast-nav','wusool-beneficiary-portal-nav','wusool-ownership-nav'],initial:0},
+        {title:'الأداء والتقارير',ids:['wusool-performance-nav','wusool-scores-nav','wusool-risk-nav','wusool-finance-nav','wusool-costs-nav','wusool-delinquency-nav','wusool-weekly-nav','wusool-reports-center-nav','wusool-report-nav','wusool-ppt-nav','wusool-smart-nav'],initial:0},
+        {title:'إدارة النظام',ids:['wusool-permissions-nav','wusool-backups-nav','wusool-settings-nav','wusool-quality-nav','wusool-health-nav','wusool-activity-nav'],initial:0}
+      ];
+      const wrapper=document.createElement('div');wrapper.className='wusool-nav-groups';
+      const boxes=sections.map((part,i)=>{const details=document.createElement('details');details.className='wusool-nav-group';details.open=i===0||i===1;const summary=document.createElement('summary');summary.textContent=part.title;const items=document.createElement('div');items.className='wusool-nav-items';details.append(summary,items);wrapper.appendChild(details);return items;});
+      original.forEach((button,i)=>boxes[i<3?0:1].appendChild(button));
+      for(const [id] of workLinks){
+        const button=document.getElementById(id);if(!button)continue;
+        let group=sections.findIndex(x=>x.ids.includes(id));if(group<0)group=3;
+        boxes[group].appendChild(button);
+      }
+      nav.appendChild(wrapper);
+    }
    };
    const refreshCount=async()=>{const {count}=await db!.from('beneficiary_submissions').select('id',{count:'exact',head:true}).in('status',['جديد','قيد المراجعة','يحتاج استكمال']);const badge=document.getElementById('wusool-requests-count');if(badge){const n=count||0;badge.textContent=String(n);badge.style.display=n>0?'inline-grid':'none';}};
    ensureLinks();observer=new MutationObserver(()=>ensureLinks());observer.observe(document.body,{childList:true,subtree:true});await refreshCount();channel=db!.channel('sidebar-request-count').on('postgres_changes',{event:'*',schema:'public',table:'beneficiary_submissions'},()=>{void refreshCount();}).subscribe();
