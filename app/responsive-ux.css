@@ -111,3 +111,19 @@ button,a{touch-action:manipulation}
  .sidebar .wusool-nav-items{max-height:180px;overflow-y:auto}
  .sidebar nav:has(.wusool-nav-groups){display:block!important;overflow-x:visible}
 }
+
+
+/* Exact visual order based on manager reference */
+@media(min-width:901px){
+ .app-shell>.sidebar{width:238px!important;flex-basis:238px!important;border-radius:0!important}
+ .sidebar .brand{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important}
+ .sidebar .wusool-nav-group>summary{font-size:12px;padding:13px 16px;color:#8b9d96}
+ .sidebar .wusool-nav-items>button{font-size:13px!important;min-height:40px;padding:10px 14px!important}
+ .manager-command-bar{position:relative!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;background:#fff!important;min-height:62px!important;padding:10px 20px!important;margin:10px 22px 18px!important}
+ .manager-global-search{flex:0 1 540px!important;width:min(540px,55%)!important}
+ .main{background:#f7faf9!important}
+ .main .topbar{box-shadow:none!important;border:0!important;background:transparent!important;padding:5px 0 16px!important}
+ .main .topbar h1{font-size:clamp(21px,2vw,30px)!important}
+}
+.sidebar .wusool-nav-items>button:focus-visible{outline:2px solid var(--w);outline-offset:1px}
+@media(max-width:900px){.manager-command-bar{margin:8px 12px!important}.sidebar .wusool-nav-group>summary{white-space:nowrap}}
