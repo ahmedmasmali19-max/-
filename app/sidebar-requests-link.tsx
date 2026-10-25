@@ -58,7 +58,7 @@ export default function SidebarRequestsLink(){
     }
     // Organize existing and extended navigation into accessible collapsible sections.
     if(!nav.querySelector('.wusool-nav-groups')){
-      const original=Array.from(nav.querySelectorAll(':scope > button')) as HTMLButtonElement[];
+      const original=Array.from(nav.querySelectorAll(':scope > button:not([id^="wusool-"])')) as HTMLButtonElement[];
       const sections=[
         {title:'الأساسية',ids:['wusool-management-nav','wusool-tasks-nav','wusool-search-nav'],initial:3},
         {title:'التشغيل والمستفيدون',ids:['wusool-requests-nav','wusool-comms-nav','wusool-chats-nav','wusool-payments-nav','wusool-operations-nav','wusool-documents-nav','wusool-followups-nav','wusool-bulk-nav','wusool-broadcast-nav','wusool-beneficiary-portal-nav','wusool-ownership-nav'],initial:0},
@@ -79,6 +79,6 @@ export default function SidebarRequestsLink(){
    const refreshCount=async()=>{const {count}=await db!.from('beneficiary_submissions').select('id',{count:'exact',head:true}).in('status',['جديد','قيد المراجعة','يحتاج استكمال']);const badge=document.getElementById('wusool-requests-count');if(badge){const n=count||0;badge.textContent=String(n);badge.style.display=n>0?'inline-grid':'none';}};
    ensureLinks();observer=new MutationObserver(()=>ensureLinks());observer.observe(document.body,{childList:true,subtree:true});await refreshCount();channel=db!.channel('sidebar-request-count').on('postgres_changes',{event:'*',schema:'public',table:'beneficiary_submissions'},()=>{void refreshCount();}).subscribe();
   }
-  void install();return()=>{mounted=false;observer?.disconnect();if(channel)db?.removeChannel(channel);document.getElementById('wusool-work-centers-title')?.remove();workLinks.forEach(([id])=>document.getElementById(id)?.remove());};
+  void install();return()=>{mounted=false;observer?.disconnect();if(channel)db?.removeChannel(channel);document.getElementById('wusool-work-centers-title')?.remove();workLinks.forEach(([id])=>document.getElementById(id)?.remove());const nav=document.querySelector<HTMLElement>('.sidebar nav');const grouped=nav?.querySelector('.wusool-nav-groups');if(grouped&&nav){grouped.querySelectorAll<HTMLButtonElement>('.wusool-nav-items>button:not([id^="wusool-"])').forEach(b=>nav.insertBefore(b,grouped));grouped.remove();}};
  },[]);return null;
 }
