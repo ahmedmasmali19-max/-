@@ -60,14 +60,16 @@ export default function SidebarRequestsLink(){
     if(!nav.querySelector('.wusool-nav-groups')){
       const original=Array.from(nav.querySelectorAll(':scope > button:not([id^="wusool-"])')) as HTMLButtonElement[];
       const sections=[
-        {title:'الأساسية',ids:['wusool-management-nav','wusool-tasks-nav','wusool-search-nav'],initial:3},
-        {title:'التشغيل والمستفيدون',ids:['wusool-requests-nav','wusool-comms-nav','wusool-chats-nav','wusool-payments-nav','wusool-operations-nav','wusool-documents-nav','wusool-followups-nav','wusool-bulk-nav','wusool-broadcast-nav','wusool-beneficiary-portal-nav','wusool-ownership-nav'],initial:0},
-        {title:'الأداء والتقارير',ids:['wusool-performance-nav','wusool-scores-nav','wusool-risk-nav','wusool-finance-nav','wusool-costs-nav','wusool-delinquency-nav','wusool-weekly-nav','wusool-reports-center-nav','wusool-report-nav','wusool-ppt-nav','wusool-smart-nav'],initial:0},
-        {title:'إدارة النظام',ids:['wusool-permissions-nav','wusool-backups-nav','wusool-settings-nav','wusool-quality-nav','wusool-health-nav','wusool-activity-nav'],initial:0}
+        {title:'الأساسية',ids:['wusool-management-nav','wusool-search-nav'],initial:0},
+        {title:'التشغيل',ids:['wusool-comms-nav','wusool-chats-nav','wusool-requests-nav','wusool-beneficiary-portal-nav','wusool-operations-nav','wusool-documents-nav','wusool-payments-nav','wusool-broadcast-nav','wusool-ownership-nav'],initial:0},
+        {title:'المهام والمعاملات',ids:['wusool-tasks-nav','wusool-followups-nav','wusool-decisions-nav','wusool-bulk-nav'],initial:0},
+        {title:'المالية والأداء',ids:['wusool-performance-nav','wusool-scores-nav','wusool-risk-nav','wusool-finance-nav','wusool-costs-nav','wusool-delinquency-nav','wusool-smart-nav'],initial:0},
+        {title:'التقارير',ids:['wusool-weekly-nav','wusool-reports-center-nav','wusool-report-nav','wusool-ppt-nav'],initial:0},
+        {title:'إعدادات وإدارة النظام',ids:['wusool-permissions-nav','wusool-backups-nav','wusool-settings-nav','wusool-quality-nav','wusool-health-nav','wusool-activity-nav'],initial:0}
       ];
       const wrapper=document.createElement('div');wrapper.className='wusool-nav-groups';
-      const boxes=sections.map((part,i)=>{const details=document.createElement('details');details.className='wusool-nav-group';details.open=i===0||i===1;const summary=document.createElement('summary');summary.textContent=part.title;const items=document.createElement('div');items.className='wusool-nav-items';details.append(summary,items);wrapper.appendChild(details);return items;});
-      original.forEach((button,i)=>boxes[i<3?0:1].appendChild(button));
+      const boxes=sections.map((part,i)=>{const details=document.createElement('details');details.className='wusool-nav-group';details.open=i===0||i===1||i===2;const summary=document.createElement('summary');summary.textContent=part.title;const items=document.createElement('div');items.className='wusool-nav-items';details.append(summary,items);wrapper.appendChild(details);return items;});
+      original.forEach((button,i)=>boxes[i<3?0:2].appendChild(button));
       for(const [id] of workLinks){
         const button=document.getElementById(id);if(!button)continue;
         let group=sections.findIndex(x=>x.ids.includes(id));if(group<0)group=3;
