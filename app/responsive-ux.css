@@ -79,3 +79,35 @@ button,a{touch-action:manipulation}
 .main .hero.wusool-personal-home{max-width:100%;min-width:0}
 @media(max-width:900px){.manager-command-bar{width:100%!important;flex-wrap:wrap!important;gap:8px!important}.manager-global-search{flex:1 1 220px!important}.manager-requests-button{margin-inline-start:12px!important}}
 @media(max-width:600px){.manager-command-bar{padding:10px!important}.manager-global-search{flex-basis:100%!important;order:2!important}.manager-notify-button{order:1!important}.manager-requests-button,.beneficiary-accounts-button{width:calc(50% - 18px)!important;justify-content:center!important;font-size:12px!important;margin:6px!important;padding:10px!important}.manager-requests-button{margin-inline-start:10px!important}}
+
+
+/* Reference-inspired manager shell: right navigation, airy content and compact header */
+@media(min-width:901px){
+ .app-shell{display:flex!important;align-items:stretch!important}
+ .app-shell>.sidebar{flex:0 0 252px!important;width:252px!important;position:sticky!important;top:0!important;height:100vh!important;overflow-y:auto!important;background:#fff!important;color:#294843!important;border-left:1px solid #e3ebe8!important;padding:18px 10px!important;box-shadow:none!important}
+ .app-shell>.sidebar .brand{border-bottom:1px solid #eef2f0;margin-bottom:14px}
+ .app-shell>.sidebar .brand b{color:#173d38}
+ .app-shell>.sidebar .brand small{color:#62837b}
+ .app-shell>.main{min-width:0;flex:1;padding:22px clamp(18px,3vw,42px)!important}
+}
+.sidebar .wusool-nav-groups{display:grid;gap:8px;width:100%;min-width:0}
+.sidebar .wusool-nav-group{border:0;min-width:0}
+.sidebar .wusool-nav-group>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 13px;border-radius:10px;color:#59817a;font-weight:800;font-size:12px}
+.sidebar .wusool-nav-group>summary::-webkit-details-marker{display:none}
+.sidebar .wusool-nav-group>summary:after{content:'⌄';font-size:14px;color:#77948d}
+.sidebar .wusool-nav-group:not([open])>summary:after{content:'‹'}
+.sidebar .wusool-nav-items{display:grid;gap:4px;padding:3px}
+.sidebar .wusool-nav-items>button{width:100%;display:flex;align-items:center;text-align:right;min-width:0;white-space:normal;padding:10px 12px;border-radius:10px;color:#284c46}
+.sidebar .wusool-nav-items>button:hover{background:#f0f7f4}
+.sidebar .wusool-nav-items>button.active{background:#eef8f4;color:#0d5f57}
+.sidebar #wusool-work-centers-title{display:none!important}
+.manager-command-bar{border-radius:17px!important;box-shadow:0 5px 22px rgba(22,62,55,.06)!important}
+.main>.topbar,.main .topbar{background:#fff;border:1px solid #e8efec;border-radius:16px;padding:16px 18px;margin-bottom:18px}
+.main>.panel,.main .panel{border-radius:18px}
+@media(max-width:900px){
+ .app-shell>.sidebar{background:#fff!important;color:#173d38!important;max-height:40vh}
+ .sidebar .wusool-nav-groups{display:flex;overflow-x:auto;align-items:flex-start}
+ .sidebar .wusool-nav-group{min-width:170px}
+ .sidebar .wusool-nav-items{max-height:180px;overflow-y:auto}
+ .sidebar nav:has(.wusool-nav-groups){display:block!important;overflow-x:visible}
+}
