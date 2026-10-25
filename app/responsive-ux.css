@@ -127,3 +127,25 @@ button,a{touch-action:manipulation}
 }
 .sidebar .wusool-nav-items>button:focus-visible{outline:2px solid var(--w);outline-offset:1px}
 @media(max-width:900px){.manager-command-bar{margin:8px 12px!important}.sidebar .wusool-nav-group>summary{white-space:nowrap}}
+
+
+/* Readable search and accessible high-contrast manager navigation */
+@media(min-width:901px){
+ .manager-command-bar{width:calc(100% - 280px)!important;max-width:calc(100vw - 300px)!important;margin-right:258px!important;margin-left:20px!important;box-sizing:border-box!important;display:flex!important;flex-direction:row!important}
+ .manager-global-search{flex:1 1 auto!important;width:auto!important;min-width:240px!important;max-width:none!important}
+}
+.manager-command-bar{background:#fff!important;border:1px solid #c7dad4!important;box-shadow:0 6px 18px rgba(19,61,53,.08)!important}
+.manager-global-search{background:#fff!important;border:1.5px solid #adcac2!important;border-radius:13px!important;min-height:43px!important}
+.manager-global-search:focus-within{border-color:#0d5f57!important;box-shadow:0 0 0 3px #d0eee4!important}
+.manager-global-search input{color:#173d38!important;font-size:14px!important;font-weight:600!important;opacity:1!important}
+.manager-global-search input::placeholder{color:#536d68!important;opacity:1!important;font-weight:500!important}
+.manager-global-search>span{color:#0d5f57!important}
+.manager-notify-button{background:#f0f7f4!important;color:#173d38!important;border:1px solid #b8d6cb!important}
+.app-shell>.sidebar{background:#ffffff!important;color:#173d38!important}
+.sidebar .wusool-nav-group>summary{color:#355d54!important;font-weight:800!important}
+.sidebar .wusool-nav-items>button{color:#173d38!important;font-weight:700!important}
+.sidebar .wusool-nav-items>button.active{color:#075c50!important;background:#ddf4ec!important;border:1px solid #8fcdb7!important}
+.sidebar .wusool-nav-items>button:hover{color:#075c50!important;background:#e8f7f1!important}
+.sidebar .brand b{color:#123f35!important}
+.sidebar .brand small{color:#486b63!important}
+@media(max-width:900px){.manager-command-bar{width:auto!important;max-width:calc(100% - 24px)!important;margin:8px 12px!important}.manager-global-search{width:100%!important;min-width:0!important}}
