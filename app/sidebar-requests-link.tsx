@@ -6,6 +6,7 @@ import {db} from '../lib/db';
 const workLinks=[
  ['wusool-beneficiary-portal-nav','بوابة المستفيد','#beneficiary-portal','↗'],
  ['wusool-management-nav','لوحة الإدارة','/admin/management','◫'],
+ ['wusool-command-nav','مركز قيادة المشروع','/admin/command','▦'],
  ['wusool-tasks-nav','مهامي اليوم','/admin/tasks','✓'],
  ['wusool-search-nav','البحث الشامل','/admin/search','⌕'],
  ['wusool-smart-nav','الاقتراحات الذكية','/admin/smart-actions','✦'],
@@ -60,7 +61,7 @@ export default function SidebarRequestsLink(){
     if(!nav.querySelector('.wusool-nav-groups')){
       const original=Array.from(nav.querySelectorAll(':scope > button:not([id^="wusool-"])')) as HTMLButtonElement[];
       const sections=[
-        {title:'الأساسية',ids:['wusool-management-nav','wusool-search-nav'],initial:0},
+        {title:'الأساسية',ids:['wusool-command-nav','wusool-management-nav','wusool-search-nav'],initial:0},
         {title:'التشغيل',ids:['wusool-comms-nav','wusool-chats-nav','wusool-requests-nav','wusool-beneficiary-portal-nav','wusool-operations-nav','wusool-documents-nav','wusool-payments-nav','wusool-broadcast-nav','wusool-ownership-nav'],initial:0},
         {title:'المهام والمعاملات',ids:['wusool-tasks-nav','wusool-followups-nav','wusool-decisions-nav','wusool-bulk-nav'],initial:0},
         {title:'المالية والأداء',ids:['wusool-performance-nav','wusool-scores-nav','wusool-risk-nav','wusool-finance-nav','wusool-costs-nav','wusool-delinquency-nav','wusool-smart-nav'],initial:0},
