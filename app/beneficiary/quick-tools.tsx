@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import {usePathname} from 'next/navigation';
 import {db} from '../../lib/db';
-const links=[['مركز الخدمات','/beneficiary/services'],['محادثاتي','/beneficiary/conversations'],['تأجيل قسط','/beneficiary/deferrals'],['بحث','/beneficiary/search'],['المراسلات','/beneficiary/communications'],['التوقيع','/beneficiary/signatures'],['ملفاتي','/beneficiary/files'],['الحوادث والصيانة','/beneficiary/operations'],['إيصالات السداد','/beneficiary/receipts'],['كشف الحساب','/beneficiary/statement']];
+const links=[['الأقساط والسداد','/beneficiary'],['طلباتي','/beneficiary/services'],['مركز الخدمات','/beneficiary/services'],['محادثاتي','/beneficiary/conversations'],['تأجيل قسط','/beneficiary/deferrals'],['بحث','/beneficiary/search'],['المراسلات','/beneficiary/communications'],['التوقيع','/beneficiary/signatures'],['ملفاتي','/beneficiary/files'],['الحوادث والصيانة','/beneficiary/operations'],['إيصالات السداد','/beneficiary/receipts'],['كشف الحساب','/beneficiary/statement']];
 export default function BeneficiaryQuickTools(){
  const path=usePathname();const [open,setOpen]=useState(false);
  useEffect(()=>{setOpen(false);if(!db)return;void db.auth.getSession().then(({data})=>{if(data.session)void db!.rpc('refresh_my_beneficiary_reminders')});},[path]);
